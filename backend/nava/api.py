@@ -20,4 +20,8 @@ def health(_request):
 urlpatterns = [
     path("health/", health, name="health"),
     path("", include("accounts.urls")),
+    path("", include("catalog.urls")),
+    path("", include("playlists.urls")),
+    path("", include("engagement.urls")),
+    path("", include("reports.urls")),
 ]

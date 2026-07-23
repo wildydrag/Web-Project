@@ -51,6 +51,17 @@ class IsApprovedArtist(BasePermission):
         )
 
 
+class IsCreditedArtistOrReadOnly(BasePermission):
+    """Object-level (Song/Album): read for all; mutate only if the requesting
+    user's artist profile is among the credited artists."""
+
+    def has_object_permission(self, request, view, obj):
+        if request.method in SAFE_METHODS:
+            return True
+        artist = getattr(request.user, "artist", None)
+        return bool(artist and obj.artists.filter(id=artist.id).exists())
+
+
 class IsOwnerOrReadOnly(BasePermission):
     """Object-level: anyone may read; only the owner may modify.
 
