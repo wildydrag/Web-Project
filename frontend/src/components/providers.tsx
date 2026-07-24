@@ -1,10 +1,12 @@
 "use client";
 
+import { useEffect } from "react";
 import { ThemeProvider } from "next-themes";
 
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
+import { useSession } from "@/lib/stores/session-store";
 
 /**
  * App-wide client providers. Kept as a thin client boundary so the root layout
@@ -15,6 +17,13 @@ import { Toaster } from "@/components/ui/sonner";
  * - `Toaster` renders Sonner notifications.
  */
 export function Providers({ children }: { children: React.ReactNode }) {
+  const bootstrap = useSession((s) => s.bootstrap);
+
+  // Restore a session from a stored token (and hydrate data) on first load.
+  useEffect(() => {
+    void bootstrap();
+  }, [bootstrap]);
+
   return (
     <ThemeProvider
       attribute="class"

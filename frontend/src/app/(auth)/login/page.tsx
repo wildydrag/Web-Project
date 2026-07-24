@@ -13,23 +13,29 @@ import { DEMO_ACCOUNTS } from "@/lib/auth/demo-accounts";
 import { homeRouteForRole } from "@/lib/navigation";
 import { useSession } from "@/lib/stores/session-store";
 
-/** Shared login for all four roles. Password is accepted but ignored (mock). */
+/** Shared login for all four roles (real backend auth). */
+const DEMO_PASSWORD = "nava1234";
+
 export default function LoginPage() {
   const router = useRouter();
   const login = useSession((s) => s.login);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  function signIn(targetEmail: string) {
-    const user = login(targetEmail);
-    if (!user) {
-      toast.error("کاربری با این ایمیل یافت نشد", {
+  async function signIn(targetEmail: string, targetPassword: string) {
+    setBusy(true);
+    try {
+      const user = await login(targetEmail, targetPassword);
+      toast.success(`خوش آمدید، ${user.displayName}`);
+      router.replace(homeRouteForRole(user.role));
+    } catch {
+      toast.error("ایمیل یا رمز عبور نادرست است", {
         description: "می‌توانید از حساب‌های نمایشی پایین صفحه استفاده کنید.",
       });
-      return;
+    } finally {
+      setBusy(false);
     }
-    toast.success(`خوش آمدید، ${user.displayName}`);
-    router.replace(homeRouteForRole(user.role));
   }
 
   return (
@@ -45,7 +51,7 @@ export default function LoginPage() {
       <form
         onSubmit={(event) => {
           event.preventDefault();
-          signIn(email);
+          void signIn(email, password);
         }}
         className="space-y-4"
       >
@@ -84,7 +90,7 @@ export default function LoginPage() {
             onChange={(event) => setPassword(event.target.value)}
           />
         </div>
-        <Button type="submit" size="lg" className="w-full">
+        <Button type="submit" size="lg" className="w-full" disabled={busy}>
           ورود
         </Button>
       </form>
@@ -107,7 +113,8 @@ export default function LoginPage() {
               type="button"
               variant="outline"
               className="h-auto flex-col items-start gap-0.5 py-1.5"
-              onClick={() => signIn(account.email)}
+              disabled={busy}
+              onClick={() => signIn(account.email, DEMO_PASSWORD)}
             >
               <span className="text-xs font-medium">{account.label}</span>
               <span className="text-[10px] text-muted-foreground">{account.hint}</span>

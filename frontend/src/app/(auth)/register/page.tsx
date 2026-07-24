@@ -21,7 +21,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useDb } from "@/lib/stores/db-store";
 import { useSession } from "@/lib/stores/session-store";
 
 // ── Validation schemas ──────────────────────────────────────────────────────
@@ -60,8 +59,7 @@ function FieldError({ message }: { message?: string }) {
 
 function ListenerSignUp() {
   const router = useRouter();
-  const addListener = useDb((s) => s.addListener);
-  const setCurrentUser = useSession((s) => s.setCurrentUser);
+  const registerListener = useSession((s) => s.registerListener);
 
   const {
     register,
@@ -73,16 +71,22 @@ function ListenerSignUp() {
     defaultValues: { gender: "unspecified", privacy: false },
   });
 
-  function onSubmit(data: ListenerForm) {
-    const user = addListener({
-      displayName: data.displayName,
-      email: data.email,
-      gender: data.gender,
-      birthDate: data.birthDate,
-    });
-    setCurrentUser(user.id);
-    toast.success("حساب شما ساخته شد. خوش آمدید!");
-    router.replace("/home");
+  async function onSubmit(data: ListenerForm) {
+    try {
+      await registerListener({
+        displayName: data.displayName,
+        email: data.email,
+        password: data.password,
+        gender: data.gender,
+        birthDate: data.birthDate,
+      });
+      toast.success("حساب شما ساخته شد. خوش آمدید!");
+      router.replace("/home");
+    } catch {
+      toast.error("ثبت‌نام ناموفق بود", {
+        description: "ممکن است این ایمیل قبلاً ثبت شده باشد.",
+      });
+    }
   }
 
   return (
@@ -190,8 +194,7 @@ function ListenerSignUp() {
 
 function ArtistSignUp() {
   const router = useRouter();
-  const addArtistApplicant = useDb((s) => s.addArtistApplicant);
-  const setCurrentUser = useSession((s) => s.setCurrentUser);
+  const registerArtist = useSession((s) => s.registerArtist);
 
   const {
     register,
@@ -199,17 +202,23 @@ function ArtistSignUp() {
     formState: { errors, isSubmitting },
   } = useForm<ArtistForm>({ resolver: zodResolver(artistSchema) });
 
-  function onSubmit(data: ArtistForm) {
-    const { user } = addArtistApplicant({
-      name: data.name,
-      email: data.email,
-      portfolio: data.portfolio,
-    });
-    setCurrentUser(user.id);
-    toast.success("درخواست هنرمندی ثبت شد", {
-      description: "حساب شما در وضعیت «در انتظار تایید» قرار گرفت.",
-    });
-    router.replace("/home");
+  async function onSubmit(data: ArtistForm) {
+    try {
+      await registerArtist({
+        name: data.name,
+        email: data.email,
+        password: data.password,
+        portfolio: data.portfolio,
+      });
+      toast.success("درخواست هنرمندی ثبت شد", {
+        description: "حساب شما در وضعیت «در انتظار تایید» قرار گرفت.",
+      });
+      router.replace("/home");
+    } catch {
+      toast.error("ثبت‌نام ناموفق بود", {
+        description: "ممکن است این ایمیل قبلاً ثبت شده باشد.",
+      });
+    }
   }
 
   return (

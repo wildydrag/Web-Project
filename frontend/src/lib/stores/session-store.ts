@@ -1,50 +1,107 @@
 "use client";
 
 /**
- * Authentication session (mocked).
+ * Authentication session (Phase 2 — real backend).
  *
- * Phase 1 has no real auth: "logging in" just resolves an account by email from
- * the mock database and remembers its id. Passwords are accepted but ignored.
- * Only the `currentUserId` is persisted; the user object itself always comes
- * from {@link useDb} so profile edits stay reflected everywhere.
+ * Login/registration hit the Django/DRF auth endpoints and store JWT tokens;
+ * the authenticated user is placed into {@link useDb} so `useCurrentUser()`
+ * keeps working unchanged, and the rest of the app data is hydrated from the API.
  */
 
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 
+import { api, tokenStore } from "@/lib/api/client";
 import { useDb } from "@/lib/stores/db-store";
 import type { User } from "@/lib/types";
 
-interface SessionState {
-  currentUserId: string | null;
-  /** Resolve an account by email and start a session. Returns null if unknown. */
-  login: (email: string) => User | null;
-  /** Begin a session for a freshly created account (after registration). */
-  setCurrentUser: (userId: string) => void;
-  logout: () => void;
+interface AuthResponse {
+  access: string;
+  refresh: string;
+  user: User;
 }
 
-export const useSession = create<SessionState>()(
-  persist(
-    (set) => ({
-      currentUserId: null,
+export interface NewListenerInput {
+  email: string;
+  password: string;
+  displayName: string;
+  gender?: User["gender"];
+  birthDate?: string;
+}
 
-      login: (email) => {
-        const user = useDb
-          .getState()
-          .users.find((u) => u.email.toLowerCase() === email.trim().toLowerCase());
-        if (!user) return null;
-        set({ currentUserId: user.id });
-        return user;
-      },
+export interface NewArtistInput {
+  name: string;
+  email: string;
+  password: string;
+  portfolio?: string;
+}
 
-      setCurrentUser: (userId) => set({ currentUserId: userId }),
+type SessionStatus = "loading" | "authed" | "anon";
 
-      logout: () => set({ currentUserId: null }),
-    }),
-    { name: "nava-session" },
-  ),
-);
+interface SessionState {
+  currentUserId: string | null;
+  status: SessionStatus;
+  login: (email: string, password: string) => Promise<User>;
+  registerListener: (input: NewListenerInput) => Promise<User>;
+  registerArtist: (input: NewArtistInput) => Promise<User>;
+  logout: () => void;
+  /** Restore a session from a stored token on app load. */
+  bootstrap: () => Promise<void>;
+}
+
+async function establish(
+  set: (partial: Partial<SessionState>) => void,
+  data: AuthResponse,
+) {
+  tokenStore.set(data.access, data.refresh);
+  useDb.getState().setCurrentUserData(data.user);
+  set({ currentUserId: data.user.id, status: "authed" });
+  await useDb.getState().hydrate(data.user);
+}
+
+export const useSession = create<SessionState>((set) => ({
+  currentUserId: null,
+  status: "loading",
+
+  login: async (email, password) => {
+    const data = await api.post<AuthResponse>("/auth/login/", { email, password });
+    await establish(set, data);
+    return data.user;
+  },
+
+  registerListener: async (input) => {
+    const data = await api.post<AuthResponse>("/auth/register/", input);
+    await establish(set, data);
+    return data.user;
+  },
+
+  registerArtist: async (input) => {
+    const data = await api.post<AuthResponse>("/auth/register-artist/", input);
+    await establish(set, data);
+    return data.user;
+  },
+
+  logout: () => {
+    tokenStore.clear();
+    useDb.getState().reset();
+    set({ currentUserId: null, status: "anon" });
+  },
+
+  bootstrap: async () => {
+    if (!tokenStore.access) {
+      set({ status: "anon" });
+      return;
+    }
+    try {
+      const user = await api.get<User>("/auth/me/");
+      useDb.getState().setCurrentUserData(user);
+      set({ currentUserId: user.id, status: "authed" });
+      await useDb.getState().hydrate(user);
+    } catch {
+      tokenStore.clear();
+      set({ currentUserId: null, status: "anon" });
+    }
+  },
+}));
 
 /**
  * The logged-in user, reactive to both the session and any edits to the account

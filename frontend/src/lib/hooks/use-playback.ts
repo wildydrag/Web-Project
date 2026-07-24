@@ -12,6 +12,7 @@
 
 import { toast } from "sonner";
 
+import { api } from "@/lib/api/client";
 import { TIERS } from "@/lib/config";
 import { useDb } from "@/lib/stores/db-store";
 import { usePlayer } from "@/lib/stores/player-store";
@@ -38,8 +39,11 @@ export function usePlayback() {
     return false;
   }
 
-  function recordStream() {
-    if (user) incrementDailyStreams(user.id);
+  function recordStream(songId: string) {
+    if (!user) return;
+    incrementDailyStreams(user.id); // instant local feedback
+    // Persist the play server-side (records the StreamEvent + enforces the cap).
+    api.post(`/songs/${songId}/play/`).catch((error) => console.error("[nava play]", error));
   }
 
   return {
@@ -49,13 +53,13 @@ export function usePlayback() {
     playSong(songIds: string[], songId: string) {
       if (!guardCap()) return;
       playSongInContext(songIds, songId);
-      recordStream();
+      recordStream(songId);
     },
     /** Play a whole list starting at an index. */
     playList(songIds: string[], startIndex = 0) {
       if (songIds.length === 0 || !guardCap()) return;
       playContext(songIds, startIndex);
-      recordStream();
+      recordStream(songIds[startIndex] ?? songIds[0]);
     },
   };
 }
