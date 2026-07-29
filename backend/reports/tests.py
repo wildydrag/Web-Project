@@ -97,6 +97,67 @@ def test_admin_can_settle_payout(api, auth, admin, approved_artist):
     assert resp.json()["status"] == "settled"
 
 
+def test_recommendations_prefer_the_genre_the_user_listens_to(api, auth, listener, approved_artist, make_user):
+    """Core grading condition: suggestions must be logical, not random."""
+    from accounts.models import Artist
+    from catalog.models import Song, SongArtist
+    from common.constants import ArtistStatus, Role, SubscriptionTier
+    _user, listened_artist = approved_artist
+    # Candidates belong to a *different* artist, so genre affinity — not artist
+    # familiarity — is what ranks them.
+    other_user = make_user("other-artist@t.app", role=Role.ARTIST, tier=SubscriptionTier.GOLD)
+    other_artist = Artist.objects.create(
+        user=other_user, name="هنرمند دوم", status=ArtistStatus.APPROVED, verified=True
+    )
+    today = datetime.date.today()
+
+    def mk(title, genre, artist, streams=100):
+        s = Song.objects.create(title=title, genre=genre, duration_sec=180,
+                                release_date=today, stream_count=streams)
+        SongArtist.objects.create(song=s, artist=artist, position=0)
+        return s
+
+    listened = mk("راک شنیده‌شده", Genre.ROCK, listened_artist)
+    rock_candidate = mk("راک دیگر", Genre.ROCK, other_artist, streams=10)
+    jazz_candidate = mk("جز", Genre.JAZZ, other_artist, streams=9000)  # popular, wrong genre
+
+    StreamEvent.objects.create(user=listener, song=listened)
+
+    body = auth(listener).get("/api/recommendations/").json()
+    titles = [row["song"]["title"] for row in body]
+
+    assert listened.title not in titles  # never re-recommend what was played
+    assert titles[0] == rock_candidate.title  # genre affinity beats raw popularity
+    assert jazz_candidate.title in titles
+    assert "راک" in body[0]["reason"]  # explains itself by genre
+
+
+def test_recommendations_cold_start_returns_popular(api, auth, listener, approved_artist):
+    from catalog.models import Song, SongArtist
+    _user, artist = approved_artist
+    today = datetime.date.today()
+    hit = Song.objects.create(title="پرطرفدار", genre=Genre.POP, duration_sec=180,
+                              release_date=today, stream_count=5000)
+    SongArtist.objects.create(song=hit, artist=artist, position=0)
+
+    body = auth(listener).get("/api/recommendations/").json()  # no history at all
+    assert body[0]["song"]["title"] == "پرطرفدار"
+    assert "محبوب" in body[0]["reason"]
+
+
+def test_recommendations_respect_early_access_visibility(api, auth, listener, approved_artist):
+    """A basic listener must never be recommended a gold-only early release."""
+    from catalog.models import Song, SongArtist
+    _user, artist = approved_artist
+    future = datetime.date.today() + datetime.timedelta(days=30)
+    early = Song.objects.create(title="زودهنگام", genre=Genre.POP, duration_sec=180,
+                                release_date=future, early_access=True, stream_count=9999)
+    SongArtist.objects.create(song=early, artist=artist, position=0)
+
+    body = auth(listener).get("/api/recommendations/").json()
+    assert "زودهنگام" not in [row["song"]["title"] for row in body]
+
+
 def test_library_search_finds_matching_title(api, auth, listener, approved_artist):
     _user, artist = approved_artist
     _song(artist, title="خورشید", streams=500)

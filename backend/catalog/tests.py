@@ -108,6 +108,24 @@ def test_publish_fans_out_new_release_to_followers(api, auth, approved_artist, m
     assert Notification.objects.filter(user=follower, kind="new_release").count() == 1
 
 
+def test_publish_album_multipart_with_json_tracks(api, auth, approved_artist):
+    """The UI sends album tracks as a JSON string when a cover file is attached."""
+    import json
+    user, _artist = approved_artist
+    resp = auth(user).post("/api/albums/", {
+        "title": "آلبوم با کاور", "genre": "پاپ", "releaseDate": "2026-07-01",
+        "cover": _png(),
+        "tracks": json.dumps([
+            {"title": "ترک یک", "durationSec": 200},
+            {"title": "ترک دو", "durationSec": 180},
+        ]),
+    }, format="multipart")
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["coverUrl"]
+    assert len(body["songIds"]) == 2
+
+
 def test_publish_single_with_audio_upload(api, auth, approved_artist):
     user, _artist = approved_artist
     resp = auth(user).post("/api/songs/", {

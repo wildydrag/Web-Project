@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import { Check, Crown, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+import {
+  SubscriptionCheckoutDialog,
+  usePaymentCallback,
+} from "@/components/subscription-checkout-dialog";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { TierBadge } from "@/components/tier-badge";
 import { Button } from "@/components/ui/button";
@@ -83,13 +87,17 @@ export default function SettingsPage() {
   const user = useCurrentUser();
   const prices = useDb((s) => s.settings.prices);
   const updateUser = useDb((s) => s.updateUser);
-  const setSubscription = useDb((s) => s.setSubscription);
   const deleteUser = useDb((s) => s.deleteUser);
   const logout = useSession((s) => s.logout);
   const volume = usePlayer((s) => s.volume);
   const setVolume = usePlayer((s) => s.setVolume);
   const router = useRouter();
   const [deleteOpen, setDeleteOpen] = useState(false);
+  // Tier the user is buying; opens the checkout dialog when set.
+  const [checkoutTier, setCheckoutTier] = useState<SubscriptionTier | null>(null);
+
+  // Finish a payment when the gateway redirects back to this page.
+  usePaymentCallback();
 
   if (!user) return null;
 
@@ -98,10 +106,15 @@ export default function SettingsPage() {
   }
 
   function chooseTier(tier: SubscriptionTier) {
-    setSubscription(user!.id, tier);
-    toast.success(`اشتراک به ${TIERS[tier].label} تغییر کرد`, {
-      description: "در فاز دوم، این مرحله به درگاه پرداخت متصل می‌شود.",
-    });
+    if (tier === user!.subscriptionTier) return;
+    if (tier === "basic") {
+      // Downgrades are not a purchase: the paid plan simply stops renewing.
+      toast.info("اشتراک پایه", {
+        description: "با پایان دوره‌ی فعلی، اشتراک شما تمدید نمی‌شود.",
+      });
+      return;
+    }
+    setCheckoutTier(tier); // paid tiers go through the payment gateway
   }
 
   function deleteAccount() {
@@ -257,6 +270,11 @@ export default function SettingsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <SubscriptionCheckoutDialog
+        tier={checkoutTier}
+        onClose={() => setCheckoutTier(null)}
+      />
     </div>
   );
 }

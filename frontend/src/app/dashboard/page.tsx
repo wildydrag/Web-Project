@@ -5,27 +5,29 @@ import { CreditCard, Ticket, UserCheck, Users, Wallet } from "lucide-react";
 
 import { StatTile } from "@/components/stat-tile";
 import { Button } from "@/components/ui/button";
-import { getPendingArtists } from "@/lib/data/selectors";
 import { formatNumber, formatToman } from "@/lib/format";
-import { useDb } from "@/lib/stores/db-store";
+import { useApiResource } from "@/lib/api/hooks";
 import { useCurrentUser } from "@/lib/stores/session-store";
+
+/** Server-aggregated figures; admin-only fields are omitted for support staff. */
+interface DashboardOverview {
+  openTickets: number;
+  pendingArtists: number;
+  totalUsers?: number;
+  monthlyRevenue?: number;
+}
 
 export default function DashboardOverviewPage() {
   const user = useCurrentUser();
-  const users = useDb((s) => s.users);
-  const tickets = useDb((s) => s.tickets);
-  const artists = useDb((s) => s.artists);
-  const prices = useDb((s) => s.settings.prices);
+  // All counts and sums are computed by the backend — the frontend only renders.
+  const { data } = useApiResource<DashboardOverview>("/dashboard/overview/");
   if (!user) return null;
 
-  const openTickets = tickets.filter((t) => t.status === "open").length;
-  const pending = getPendingArtists(artists).length;
   const isAdmin = user.role === "admin";
-
-  // Estimated monthly subscription revenue from the active paid memberships.
-  const monthlyRevenue =
-    users.filter((u) => u.subscriptionTier === "silver").length * prices.silver +
-    users.filter((u) => u.subscriptionTier === "gold").length * prices.gold;
+  const openTickets = data?.openTickets ?? 0;
+  const pending = data?.pendingArtists ?? 0;
+  const totalUsers = data?.totalUsers ?? 0;
+  const monthlyRevenue = data?.monthlyRevenue ?? 0;
 
   return (
     <div className="space-y-6">
@@ -41,7 +43,7 @@ export default function DashboardOverviewPage() {
         <StatTile label="درخواست‌های در انتظار" value={formatNumber(pending)} icon={UserCheck} />
         {isAdmin ? (
           <>
-            <StatTile label="کل کاربران" value={formatNumber(users.length)} icon={Users} />
+            <StatTile label="کل کاربران" value={formatNumber(totalUsers)} icon={Users} />
             <StatTile
               label="درآمد ماهانه (تخمینی)"
               value={formatToman(monthlyRevenue)}

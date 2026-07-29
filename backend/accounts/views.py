@@ -1,5 +1,8 @@
 """Auth views: registration (listener/artist), login, and the current user."""
 
+from django.db.models import F
+from django.db.models.functions import Greatest
+from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -7,6 +10,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
+from .models import Artist, Follow
 from .serializers import (
     LoginSerializer,
     ProfileUpdateSerializer,
@@ -60,3 +64,24 @@ class MeView(generics.RetrieveUpdateAPIView):
         if self.request.method in ("PUT", "PATCH"):
             return ProfileUpdateSerializer
         return UserSerializer
+
+
+class ToggleFollowView(APIView):
+    """Follow/unfollow an artist; keeps the denormalized follower_count in sync."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        artist = get_object_or_404(Artist, id=request.data.get("artist_id"))
+        follow = Follow.objects.filter(follower=request.user, artist=artist).first()
+        if follow is None:
+            Follow.objects.create(follower=request.user, artist=artist)
+            Artist.objects.filter(pk=artist.pk).update(follower_count=F("follower_count") + 1)
+            following = True
+        else:
+            follow.delete()
+            Artist.objects.filter(pk=artist.pk).update(
+                follower_count=Greatest(F("follower_count") - 1, 0)
+            )
+            following = False
+        return Response({"following": following})

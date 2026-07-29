@@ -1,7 +1,9 @@
 """Catalog serializers: read shapes matching types.ts, plus publish/edit."""
 
+import json
 import secrets
 
+from djangorestframework_camel_case.util import underscoreize
 from rest_framework import serializers
 
 from accounts.models import Artist
@@ -179,6 +181,24 @@ class AlbumWriteSerializer(_CreditMixin, serializers.Serializer):
     )
     cover = serializers.ImageField(required=False, allow_null=True)
     tracks = AlbumTrackSerializer(many=True)
+
+    def to_internal_value(self, data):
+        # A multipart upload cannot nest objects, so the client sends `tracks` as
+        # a JSON string alongside the cover file. Two conversions are needed:
+        # the camelCase parser only rewrites top-level form keys (so nested keys
+        # are converted here), and the QueryDict is flattened to a plain dict so
+        # DRF parses the decoded list as JSON input rather than HTML form input.
+        tracks = data.get("tracks")
+        if isinstance(tracks, str):
+            try:
+                parsed = json.loads(tracks)
+            except json.JSONDecodeError:
+                raise serializers.ValidationError({"tracks": "فهرست ترک‌ها معتبر نیست."})
+            flat = {key: data.get(key) for key in data}
+            flat["tracks"] = underscoreize(parsed)
+            flat["collaborator_ids"] = data.getlist("collaborator_ids") or []
+            data = flat
+        return super().to_internal_value(data)
 
     def validate_tracks(self, value):
         if not value:

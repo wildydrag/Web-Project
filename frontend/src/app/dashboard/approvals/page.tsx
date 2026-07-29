@@ -13,15 +13,21 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { byId, getPendingArtists } from "@/lib/data/selectors";
 import { formatShortDate } from "@/lib/format";
-import { useDb } from "@/lib/stores/db-store";
+import { useApiResource } from "@/lib/api/hooks";
+
+/** Pending applicants, already joined to the applicant's email by the backend. */
+interface PendingApplication {
+  id: string;
+  name: string;
+  email: string;
+  requestedAt: string;
+  portfolio: string;
+}
 
 export default function ApprovalsPage() {
-  const artists = useDb((s) => s.artists);
-  const users = useDb((s) => s.users);
-
-  const pending = getPendingArtists(artists);
+  const { data } = useApiResource<PendingApplication[]>("/dashboard/approvals/");
+  const pending = data ?? [];
 
   return (
     <div className="space-y-6">
@@ -51,12 +57,11 @@ export default function ApprovalsPage() {
             </TableHeader>
             <TableBody>
               {pending.map((artist) => {
-                const email = byId(users, artist.userId)?.email ?? "—";
                 return (
                   <TableRow key={artist.id}>
                     <TableCell className="font-medium">{artist.name}</TableCell>
                     <TableCell className="hidden text-muted-foreground sm:table-cell" dir="ltr">
-                      {email}
+                      {artist.email}
                     </TableCell>
                     <TableCell className="hidden text-muted-foreground md:table-cell">
                       {formatShortDate(artist.requestedAt)}

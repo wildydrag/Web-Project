@@ -11,14 +11,23 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatNumber, formatToman } from "@/lib/format";
+import { useApiResource } from "@/lib/api/hooks";
 import { useDb } from "@/lib/stores/db-store";
 import { useCurrentUser } from "@/lib/stores/session-store";
 
+/** Tier distribution and revenue, aggregated server-side. */
+interface SubscriptionReport {
+  counts: { basic: number; silver: number; gold: number };
+  totalSubscribers: number;
+  monthlyRevenue: number;
+  prices: { silver: number; gold: number };
+}
+
 export default function SubscriptionsPage() {
   const user = useCurrentUser();
-  const users = useDb((s) => s.users);
   const prices = useDb((s) => s.settings.prices);
   const updatePrices = useDb((s) => s.updatePrices);
+  const { data, refresh } = useApiResource<SubscriptionReport>("/dashboard/subscriptions/");
 
   const [silver, setSilver] = useState(prices.silver);
   const [gold, setGold] = useState(prices.gold);
@@ -34,14 +43,10 @@ export default function SubscriptionsPage() {
     );
   }
 
-  // Distribution counts across the three tiers (subscribers only).
-  const subscribers = users.filter((u) => u.role === "listener" || u.role === "artist");
-  const counts = {
-    basic: subscribers.filter((u) => u.subscriptionTier === "basic").length,
-    silver: subscribers.filter((u) => u.subscriptionTier === "silver").length,
-    gold: subscribers.filter((u) => u.subscriptionTier === "gold").length,
-  };
-  const monthlyRevenue = counts.silver * prices.silver + counts.gold * prices.gold;
+  // Distribution and revenue come from the backend; no client-side reduction.
+  const counts = data?.counts ?? { basic: 0, silver: 0, gold: 0 };
+  const monthlyRevenue = data?.monthlyRevenue ?? 0;
+  const totalSubscribers = data?.totalSubscribers ?? 0;
 
   function savePrices(event: React.FormEvent) {
     event.preventDefault();
@@ -49,6 +54,7 @@ export default function SubscriptionsPage() {
     toast.success("قیمت‌ها به‌روزرسانی شد", {
       description: "قیمت‌های جدید بلافاصله در کل سامانه اعمال شد.",
     });
+    refresh(); // re-pull revenue with the new prices
   }
 
   return (
@@ -65,7 +71,7 @@ export default function SubscriptionsPage() {
         <StatTile label="درآمد ماهانه" value={formatToman(monthlyRevenue)} icon={Wallet} />
         <StatTile label="اعضای طلایی" value={formatNumber(counts.gold)} icon={Crown} />
         <StatTile label="اعضای نقره‌ای" value={formatNumber(counts.silver)} icon={Sparkles} />
-        <StatTile label="کل مشترکان" value={formatNumber(subscribers.length)} />
+        <StatTile label="کل مشترکان" value={formatNumber(totalSubscribers)} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">

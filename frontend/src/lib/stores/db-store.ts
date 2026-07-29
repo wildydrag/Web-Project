@@ -35,6 +35,9 @@ export interface PublishSingleInput {
   releaseDate: string;
   lyrics?: string;
   collaboratorIds?: string[];
+  /** Real uploads — sent as multipart when present. */
+  audio?: File;
+  cover?: File;
 }
 
 export interface PublishAlbumInput {
@@ -43,6 +46,31 @@ export interface PublishAlbumInput {
   releaseDate: string;
   collaboratorIds?: string[];
   tracks: { title: string; durationSec: number; lyrics?: string }[];
+  cover?: File;
+}
+
+/**
+ * Build a multipart body. Scalars are appended as strings; repeated keys carry
+ * lists, and nested objects (album tracks) are sent as a JSON string field.
+ */
+function toFormData(fields: Record<string, unknown>): FormData {
+  const form = new FormData();
+  for (const [key, value] of Object.entries(fields)) {
+    if (value === undefined || value === null) continue;
+    if (value instanceof File) {
+      form.append(key, value);
+    } else if (Array.isArray(value)) {
+      if (value.length === 0) continue;
+      if (typeof value[0] === "object") {
+        form.append(key, JSON.stringify(value));
+      } else {
+        value.forEach((item) => form.append(key, String(item)));
+      }
+    } else {
+      form.append(key, String(value));
+    }
+  }
+  return form;
 }
 
 /** Fire-and-forget a background sync; surface failures without blocking the UI. */
@@ -253,15 +281,21 @@ export const useDb = create<DbState>()((set, get) => ({
 
   // ── Catalog ──────────────────────────────────────────────────────────────
   publishSingle: async (_artistId, input) => {
+    const payload = {
+      title: input.title,
+      genre: input.genre,
+      durationSec: input.durationSec,
+      releaseDate: input.releaseDate,
+      lyrics: input.lyrics ?? "",
+      collaboratorIds: input.collaboratorIds ?? [],
+      audio: input.audio,
+      cover: input.cover,
+    };
     try {
-      const song = await api.post<Song>("/songs/", {
-        title: input.title,
-        genre: input.genre,
-        durationSec: input.durationSec,
-        releaseDate: input.releaseDate,
-        lyrics: input.lyrics ?? "",
-        collaboratorIds: input.collaboratorIds ?? [],
-      });
+      // Multipart only when the artist actually attached a file.
+      const song = input.audio || input.cover
+        ? await api.postForm<Song>("/songs/", toFormData(payload))
+        : await api.post<Song>("/songs/", payload);
       set((s) => ({ songs: [song, ...s.songs] }));
       return song;
     } catch (error) {
@@ -272,18 +306,28 @@ export const useDb = create<DbState>()((set, get) => ({
   },
 
   publishAlbum: async (_artistId, input) => {
+    const tracks = input.tracks.map((t) => ({
+      title: t.title,
+      durationSec: t.durationSec,
+      lyrics: t.lyrics ?? "",
+    }));
     try {
-      const album = await api.post<Album>("/albums/", {
-        title: input.title,
-        genre: input.genre,
-        releaseDate: input.releaseDate,
-        collaboratorIds: input.collaboratorIds ?? [],
-        tracks: input.tracks.map((t) => ({
-          title: t.title,
-          durationSec: t.durationSec,
-          lyrics: t.lyrics ?? "",
-        })),
-      });
+      const album = input.cover
+        ? await api.postForm<Album>("/albums/", toFormData({
+            title: input.title,
+            genre: input.genre,
+            releaseDate: input.releaseDate,
+            collaboratorIds: input.collaboratorIds ?? [],
+            tracks,
+            cover: input.cover,
+          }))
+        : await api.post<Album>("/albums/", {
+            title: input.title,
+            genre: input.genre,
+            releaseDate: input.releaseDate,
+            collaboratorIds: input.collaboratorIds ?? [],
+            tracks,
+          });
       set((s) => ({ albums: [album, ...s.albums] }));
       bg(get().hydrate(get().users.find(Boolean)!)); // refresh songs list
       return album;

@@ -1,0 +1,65 @@
+# Nava — full stack in one command:
+#
+#   docker compose up
+#
+# Frontend: http://localhost:3000   Backend API: http://localhost:8000/api
+# Demo accounts are seeded automatically; password: nava1234
+#
+# If a host port is already taken, override it (the frontend bundle is rebuilt
+# with the matching API URL automatically):
+#
+#   BACKEND_PORT=8010 FRONTEND_PORT=3010 docker compose up --build
+#
+# The payment gateway defaults to the offline "fake" provider so the stack works
+# without internet access. Set PAYMENT_GATEWAY=zarinpal (plus a merchant id) to
+# use the real sandbox.
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: nava
+      POSTGRES_USER: nava
+      POSTGRES_PASSWORD: nava
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nava -d nava"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  backend:
+    build: ./backend
+    environment:
+      DJANGO_SECRET_KEY: docker-compose-dev-secret-change-me
+      DJANGO_DEBUG: "True"
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,backend
+      DATABASE_URL: postgres://nava:nava@db:5432/nava
+      CORS_ALLOWED_ORIGINS: http://localhost:${FRONTEND_PORT:-3000}
+      PAYMENT_GATEWAY: fake
+      PAYMENT_CALLBACK_URL: http://localhost:${FRONTEND_PORT:-3000}/settings?payment=callback
+      SEED_ON_START: "true"
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    volumes:
+      # Uploaded audio and images survive container restarts.
+      - media:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Baked into the bundle at build time; this is the URL the *browser* uses.
+        NEXT_PUBLIC_API_URL: http://localhost:${BACKEND_PORT:-8000}/api
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      - backend
+
+volumes:
+  db-data:
+  media:

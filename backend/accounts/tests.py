@@ -121,3 +121,14 @@ def test_gold_tier_can_upload_avatar(api, auth, gold_listener):
     resp = client.patch("/api/auth/me/", {"avatar": _png()}, format="multipart")
     assert resp.status_code == 200
     assert resp.json()["avatarUrl"]
+
+
+def test_toggle_follow_updates_state_and_count(api, auth, listener, approved_artist):
+    _user, artist = approved_artist
+    client = auth(listener)
+    on = client.post("/api/auth/me/toggle-follow/", {"artistId": artist.id}, format="json")
+    assert on.json()["following"] is True
+    assert artist.id in client.get("/api/auth/me/").json()["followingIds"]
+    off = client.post("/api/auth/me/toggle-follow/", {"artistId": artist.id}, format="json")
+    assert off.json()["following"] is False
+    assert artist.id not in client.get("/api/auth/me/").json()["followingIds"]

@@ -4,6 +4,7 @@ import { Sparkles } from "lucide-react";
 
 import { AlbumCard } from "@/components/catalog/album-card";
 import { MediaGrid } from "@/components/catalog/media-grid";
+import { RecommendationsSection } from "@/components/catalog/recommendations-section";
 import { PlaylistCard } from "@/components/catalog/playlist-card";
 import { SongCard } from "@/components/catalog/song-card";
 import { SectionHeader } from "@/components/section-header";
@@ -97,6 +98,8 @@ export default function HomePage() {
           ))}
         </MediaGrid>
       </section>
+
+      <RecommendationsSection />
 
       <section>
         <SectionHeader title="پرشنونده‌ها" description="آهنگ‌هایی که این روزها زیاد شنیده می‌شوند" />

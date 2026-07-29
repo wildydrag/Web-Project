@@ -101,6 +101,26 @@ class LibraryView(APIView):
         return Response(items)
 
 
+class RecommendationsView(APIView):
+    """Personalized song suggestions, each with the reason it was chosen."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from .recommendations import recommend_for
+
+        ctx = {"request": request}
+        results = recommend_for(request.user)
+        return Response([
+            {
+                "song": SongSerializer(rec.song, context=ctx).data,
+                "reason": rec.reason,
+                "score": rec.score,
+            }
+            for rec in results
+        ])
+
+
 class DashboardOverviewView(APIView):
     permission_classes = [IsStaff]
 

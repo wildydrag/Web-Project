@@ -53,8 +53,9 @@ export function PublishWorkDialog({ artistId }: { artistId: string }) {
   const [durationSec, setDurationSec] = useState(200);
   const [tracks, setTracks] = useState<TrackDraft[]>([{ title: "", durationSec: 200 }]);
   const [collaborators, setCollaborators] = useState<string[]>([]);
-  const [audioName, setAudioName] = useState("");
-  const [coverName, setCoverName] = useState("");
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const otherArtists = artists.filter((a) => a.status === "approved" && a.id !== artistId);
 
@@ -67,8 +68,8 @@ export function PublishWorkDialog({ artistId }: { artistId: string }) {
     setDurationSec(200);
     setTracks([{ title: "", durationSec: 200 }]);
     setCollaborators([]);
-    setAudioName("");
-    setCoverName("");
+    setAudioFile(null);
+    setCoverFile(null);
   }
 
   function toggleCollaborator(id: string) {
@@ -77,7 +78,7 @@ export function PublishWorkDialog({ artistId }: { artistId: string }) {
     );
   }
 
-  function submit(event: React.FormEvent) {
+  async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (!title.trim()) {
       toast.error("عنوان اثر را وارد کنید");
@@ -85,33 +86,42 @@ export function PublishWorkDialog({ artistId }: { artistId: string }) {
     }
     const isoDate = `${releaseDate}T00:00:00.000Z`;
 
-    if (kind === "single") {
-      publishSingle(artistId, {
-        title: title.trim(),
-        genre,
-        durationSec,
-        releaseDate: isoDate,
-        lyrics: lyrics.trim() || undefined,
-        collaboratorIds: collaborators,
-      });
-    } else {
-      const validTracks = tracks.filter((t) => t.title.trim());
-      if (validTracks.length === 0) {
-        toast.error("حداقل یک ترک با عنوان وارد کنید");
-        return;
+    setBusy(true);
+    try {
+      let created: unknown;
+      if (kind === "single") {
+        created = await publishSingle(artistId, {
+          title: title.trim(),
+          genre,
+          durationSec,
+          releaseDate: isoDate,
+          lyrics: lyrics.trim() || undefined,
+          collaboratorIds: collaborators,
+          audio: audioFile ?? undefined,
+          cover: coverFile ?? undefined,
+        });
+      } else {
+        const validTracks = tracks.filter((t) => t.title.trim());
+        if (validTracks.length === 0) {
+          toast.error("حداقل یک ترک با عنوان وارد کنید");
+          return;
+        }
+        created = await publishAlbum(artistId, {
+          title: title.trim(),
+          genre,
+          releaseDate: isoDate,
+          collaboratorIds: collaborators,
+          tracks: validTracks.map((t) => ({ title: t.title.trim(), durationSec: t.durationSec })),
+          cover: coverFile ?? undefined,
+        });
       }
-      publishAlbum(artistId, {
-        title: title.trim(),
-        genre,
-        releaseDate: isoDate,
-        collaboratorIds: collaborators,
-        tracks: validTracks.map((t) => ({ title: t.title.trim(), durationSec: t.durationSec })),
-      });
+      if (!created) return; // the store already surfaced the error
+      toast.success("اثر منتشر شد");
+      reset();
+      setOpen(false);
+    } finally {
+      setBusy(false);
     }
-
-    toast.success("اثر منتشر شد");
-    reset();
-    setOpen(false);
   }
 
   return (
@@ -182,21 +192,21 @@ export function PublishWorkDialog({ artistId }: { artistId: string }) {
                 </div>
               </div>
 
-              {/* File pickers (mock — only the name is shown). */}
+              {/* Real uploads: the chosen files are sent to the API as multipart. */}
               <div className="grid grid-cols-2 gap-3">
                 <FilePicker
                   icon={FileAudio}
                   label="فایل صوتی"
                   accept="audio/*,.mp3,.wav,.flac"
-                  fileName={audioName}
-                  onPick={setAudioName}
+                  file={audioFile}
+                  onPick={setAudioFile}
                 />
                 <FilePicker
                   icon={ImageIcon}
                   label="کاور"
                   accept="image/*"
-                  fileName={coverName}
-                  onPick={setCoverName}
+                  file={coverFile}
+                  onPick={setCoverFile}
                 />
               </div>
 
@@ -325,24 +335,24 @@ function FilePicker({
   icon: Icon,
   label,
   accept,
-  fileName,
+  file,
   onPick,
 }: {
   icon: typeof FileAudio;
   label: string;
   accept: string;
-  fileName: string;
-  onPick: (name: string) => void;
+  file: File | null;
+  onPick: (file: File | null) => void;
 }) {
   return (
     <label className="flex h-10 cursor-pointer items-center gap-2 rounded-lg border border-dashed border-input px-3 text-sm text-muted-foreground hover:border-ring">
       <Icon className="size-4 shrink-0" />
-      <span className="min-w-0 flex-1 truncate">{fileName || label}</span>
+      <span className="min-w-0 flex-1 truncate">{file?.name || label}</span>
       <input
         type="file"
         accept={accept}
         className="hidden"
-        onChange={(event) => onPick(event.target.files?.[0]?.name ?? "")}
+        onChange={(event) => onPick(event.target.files?.[0] ?? null)}
       />
     </label>
   );
