@@ -1,4 +1,7 @@
-"""Subscription tests: checkout → verify → activation, and admin pricing."""
+"""API tests for the checkout → verify → activation flow and admin pricing.
+
+Pure unit tests for the billing maths and the gateway live in ``test_billing.py``.
+"""
 
 import pytest
 
