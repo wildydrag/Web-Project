@@ -53,6 +53,18 @@ def test_tickets_owner_scoped_for_listener_all_for_staff(api, auth, listener, su
     assert auth(support).get("/api/tickets/").json()["count"] == 2
 
 
+def test_ticket_row_carries_every_column_the_dashboard_lists(api, auth, listener, support):
+    """The brief's table is: id, user name, email, date, subject, status."""
+    Ticket.objects.create(user=listener, subject="مشکل پرداخت")
+    row = auth(support).get("/api/tickets/").json()["results"][0]
+    assert row["id"]
+    assert row["userName"] == listener.display_name
+    assert row["userEmail"] == listener.email
+    assert row["createdAt"]
+    assert row["subject"] == "مشکل پرداخت"
+    assert row["status"] == "open"
+
+
 def test_staff_reply_sets_answered(api, auth, listener, support):
     ticket = Ticket.objects.create(user=listener, subject="a")
     resp = auth(support).post(f"/api/tickets/{ticket.id}/reply/", {"body": "پاسخ"}, format="json")

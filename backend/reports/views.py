@@ -52,7 +52,7 @@ class HomeView(APIView):
         return Response(data)
 
     def _early_access(self, user, ctx):
-        if user.subscription_tier != SubscriptionTier.GOLD:
+        if user.current_tier != SubscriptionTier.GOLD:
             return {"albums": [], "singles": []}
         albums = (Album.objects.filter(early_access=True)
                   .prefetch_related(*_ALBUM_PREFETCH))

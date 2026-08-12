@@ -1,6 +1,9 @@
 """Shared pytest fixtures for the Nava backend test-suite."""
 
+from datetime import timedelta
+
 import pytest
+from django.utils import timezone
 from rest_framework.test import APIClient
 
 from accounts.models import Artist, User, UserPreferences
@@ -19,6 +22,10 @@ def api():
 
 
 def _make_user(email, role=Role.LISTENER, tier=SubscriptionTier.BASIC, **extra):
+    # A paid tier is only in force while it has a future renewal date, so give
+    # fixtures one by default. Tests that need a lapsed plan pass it explicitly.
+    if tier != SubscriptionTier.BASIC and "subscription_renews_at" not in extra:
+        extra["subscription_renews_at"] = timezone.now() + timedelta(days=30)
     user = User.objects.create_user(
         email=email, password="nava1234", role=role,
         display_name=extra.pop("display_name", email.split("@")[0]),

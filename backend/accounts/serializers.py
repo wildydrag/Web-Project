@@ -26,14 +26,18 @@ class UserSerializer(serializers.ModelSerializer):
     daily_streams = serializers.SerializerMethodField()
     artist_id = serializers.SerializerMethodField()
     avatar_url = serializers.SerializerMethodField()
+    # The tier actually in force: a lapsed plan reports as basic, so the client
+    # never shows privileges the server would refuse.
+    subscription_tier = serializers.CharField(source="current_tier", read_only=True)
+    subscription_is_active = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = User
         fields = [
             "id", "email", "role", "display_name", "username", "avatar_url",
             "avatar_seed", "gender", "birth_date", "created_at", "subscription_tier",
-            "subscription_renews_at", "following_ids", "follower_count",
-            "daily_streams", "preferences", "artist_id",
+            "subscription_renews_at", "subscription_is_active", "following_ids",
+            "follower_count", "daily_streams", "preferences", "artist_id",
         ]
 
     def get_following_ids(self, obj) -> list[str]:
@@ -125,7 +129,7 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
         fields = ["display_name", "gender", "birth_date", "avatar", "preferences"]
 
     def validate_avatar(self, value):
-        if value and not TIERS[self.instance.subscription_tier].can_upload_avatar:
+        if value and not TIERS[self.instance.current_tier].can_upload_avatar:
             raise serializers.ValidationError(
                 "برای آپلود عکس نمایه باید اشتراک خود را ارتقا دهید."
             )

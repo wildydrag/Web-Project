@@ -117,3 +117,8 @@ TIERS: dict[str, TierBenefits] = {
 # Default monthly prices in Toman (admin-editable at runtime via PlatformSettings).
 DEFAULT_SILVER_PRICE = 79000
 DEFAULT_GOLD_PRICE = 149000
+
+# Default artist payout rates in Toman, also admin-editable at runtime.
+# reward = streams x per_stream + unique_listeners x per_listener
+DEFAULT_PAYOUT_PER_STREAM = 2
+DEFAULT_PAYOUT_PER_LISTENER = 50

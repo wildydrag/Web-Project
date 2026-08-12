@@ -41,6 +41,7 @@ export default function TicketsPage() {
               <TableRow>
                 <TableHead>شناسه</TableHead>
                 <TableHead>کاربر</TableHead>
+                <TableHead className="hidden md:table-cell">ایمیل</TableHead>
                 <TableHead>موضوع</TableHead>
                 <TableHead className="hidden sm:table-cell">تاریخ</TableHead>
                 <TableHead>وضعیت</TableHead>
@@ -59,6 +60,12 @@ export default function TicketsPage() {
                       {ticket.id}
                     </TableCell>
                     <TableCell>{ticket.userName}</TableCell>
+                    <TableCell
+                      className="hidden text-muted-foreground md:table-cell"
+                      dir="ltr"
+                    >
+                      {ticket.userEmail ?? "—"}
+                    </TableCell>
                     <TableCell className="max-w-[16rem] truncate">{ticket.subject}</TableCell>
                     <TableCell className="hidden text-muted-foreground sm:table-cell">
                       {formatShortDate(ticket.createdAt)}

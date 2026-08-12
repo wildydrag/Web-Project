@@ -18,7 +18,7 @@ class VisibleQuerySet(models.QuerySet):
     """
 
     def visible_to(self, user):
-        if user is not None and getattr(user, "subscription_tier", None) == SubscriptionTier.GOLD:
+        if user is not None and getattr(user, "current_tier", None) == SubscriptionTier.GOLD:
             return self
         today = timezone.localdate()
         return self.filter(Q(early_access=False) | Q(release_date__lte=today))

@@ -27,7 +27,7 @@ class PlaylistViewSet(viewsets.ModelViewSet):
         )
 
     def perform_create(self, serializer):
-        limit = TIERS[self.request.user.subscription_tier].playlist_limit
+        limit = TIERS[self.request.user.current_tier].playlist_limit
         if limit is not None:
             owned = Playlist.objects.filter(owner=self.request.user).count()
             if owned >= limit:
