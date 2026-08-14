@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/sheet";
 import { dashboardNavForRole } from "@/lib/dashboard-nav";
 import { useCurrentUser } from "@/lib/stores/session-store";
-import { useT } from "@/lib/i18n";
+import { useEdges, useT } from "@/lib/i18n";
 
 function DashboardSidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const t = useT();
@@ -43,6 +43,7 @@ export function DashboardSidebar() {
 
 /** Hamburger + drawer for the dashboard on mobile. */
 export function DashboardMobileSidebar() {
+  const edges = useEdges();
   const t = useT();
   const [open, setOpen] = useState(false);
   return (
@@ -51,7 +52,7 @@ export function DashboardMobileSidebar() {
         <Menu />
         <span className="sr-only">{t("باز کردن منو")}</span>
       </SheetTrigger>
-      <SheetContent side="right" className="w-72 bg-sidebar p-0">
+      <SheetContent side={edges.start} className="w-72 bg-sidebar p-0">
         <SheetTitle className="sr-only">{t("منوی پنل مدیریت")}</SheetTitle>
         <DashboardSidebarContent onNavigate={() => setOpen(false)} />
       </SheetContent>

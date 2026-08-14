@@ -17,11 +17,12 @@ import { formatDuration } from "@/lib/format";
 import { useDb } from "@/lib/stores/db-store";
 import { usePlayer } from "@/lib/stores/player-store";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n";
+import { useEdges, useT } from "@/lib/i18n";
 
 /** "Up next" panel — the playback queue, with jump-to and remove. */
 export function QueueSheet() {
   const t = useT();
+  const edges = useEdges();
   const queue = usePlayer((s) => s.queue);
   const index = usePlayer((s) => s.index);
   const isPlaying = usePlayer((s) => s.isPlaying);
@@ -37,7 +38,7 @@ export function QueueSheet() {
       >
         <ListMusic />
       </SheetTrigger>
-      <SheetContent side="left" className="flex w-full flex-col p-0 sm:max-w-sm">
+      <SheetContent side={edges.end} className="flex w-full flex-col p-0 sm:max-w-sm">
         <SheetHeader className="border-b">
           <SheetTitle>{t("صف پخش")}</SheetTitle>
         </SheetHeader>

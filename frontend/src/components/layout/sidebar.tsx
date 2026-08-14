@@ -17,7 +17,7 @@ import { navItemsForRole } from "@/lib/navigation";
 import { unreadNotificationCount } from "@/lib/data/selectors";
 import { useDb } from "@/lib/stores/db-store";
 import { useCurrentUser } from "@/lib/stores/session-store";
-import { useT } from "@/lib/i18n";
+import { useEdges, useT } from "@/lib/i18n";
 
 /**
  * The contents of the sidebar — reused by the fixed desktop rail and the mobile
@@ -76,6 +76,7 @@ export function AppSidebar() {
 
 /** Hamburger button + slide-over drawer holding the same nav, for mobile. */
 export function MobileSidebar() {
+  const edges = useEdges();
   const t = useT();
   const [open, setOpen] = useState(false);
   return (
@@ -86,7 +87,7 @@ export function MobileSidebar() {
         <Menu />
         <span className="sr-only">{t("باز کردن منو")}</span>
       </SheetTrigger>
-      <SheetContent side="right" className="w-72 bg-sidebar p-0">
+      <SheetContent side={edges.start} className="w-72 bg-sidebar p-0">
         <SheetTitle className="sr-only">{t("منوی ناوبری")}</SheetTitle>
         <SidebarContent onNavigate={() => setOpen(false)} />
       </SheetContent>

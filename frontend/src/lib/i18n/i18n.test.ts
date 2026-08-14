@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { DIRECTION, LOCALE, tr, translate, useLanguageStore } from "@/lib/i18n";
+import { DIRECTION, LOCALE, edgesFor, tr, translate, useLanguageStore } from "@/lib/i18n";
 import { EN } from "@/lib/i18n/dictionary";
 
 beforeEach(() => {
@@ -104,6 +104,29 @@ describe("writing direction", () => {
   it("exposes a BCP-47 tag for Intl formatting", () => {
     expect(LOCALE.fa).toBe("fa-IR");
     expect(LOCALE.en).toBe("en-US");
+  });
+});
+
+describe("reading edges", () => {
+  /**
+   * The slide-in sheets need a literal "left"/"right" rather than a logical
+   * property, so the navigation drawer has to be told which edge to use. It
+   * must open from the side the menu button is on — right in Persian, left in
+   * English — and the queue/lyrics panels from the opposite edge.
+   */
+  it("puts the start edge on the right in Persian", () => {
+    expect(edgesFor("fa")).toEqual({ start: "right", end: "left" });
+  });
+
+  it("puts the start edge on the left in English", () => {
+    expect(edgesFor("en")).toEqual({ start: "left", end: "right" });
+  });
+
+  it("never returns the same edge for both", () => {
+    for (const language of ["fa", "en"] as const) {
+      const { start, end } = edgesFor(language);
+      expect(start).not.toBe(end);
+    }
   });
 });
 

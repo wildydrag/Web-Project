@@ -3,7 +3,7 @@
 import { Mic2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { useT } from "@/lib/i18n";
+import { useEdges, useT } from "@/lib/i18n";
 import {
   Sheet,
   SheetContent,
@@ -15,6 +15,7 @@ import {
 /** Lyrics panel for the desktop player (mobile uses the in-player toggle). */
 export function LyricsSheet({ title, lyrics }: { title: string; lyrics?: string }) {
   const t = useT();
+  const edges = useEdges();
   return (
     <Sheet>
       <SheetTrigger
@@ -22,7 +23,7 @@ export function LyricsSheet({ title, lyrics }: { title: string; lyrics?: string 
       >
         <Mic2 />
       </SheetTrigger>
-      <SheetContent side="left" className="flex w-full flex-col p-0 sm:max-w-md">
+      <SheetContent side={edges.end} className="flex w-full flex-col p-0 sm:max-w-md">
         <SheetHeader className="border-b">
           <SheetTitle>{t("متن آهنگ — {title}", { title })}</SheetTitle>
         </SheetHeader>

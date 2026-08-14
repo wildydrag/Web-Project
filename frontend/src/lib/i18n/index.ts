@@ -79,3 +79,27 @@ export function useLanguage(): { language: Language; dir: "rtl" | "ltr"; locale:
   const language = useLanguageStore((s) => s.language);
   return { language, dir: DIRECTION[language], locale: LOCALE[language] };
 }
+
+/**
+ * The physical edges that correspond to the reading direction.
+ *
+ * Layout is handled by CSS logical properties almost everywhere, but a few
+ * components — the slide-in sheets in particular — need a literal `"left"` or
+ * `"right"`. `start` is the edge reading begins from (right in Persian, left in
+ * English), so a navigation drawer anchored to `start` opens from the side the
+ * menu button sits on in both languages.
+ */
+export function edgesFor(language: Language): Edges {
+  return DIRECTION[language] === "rtl"
+    ? { start: "right", end: "left" }
+    : { start: "left", end: "right" };
+}
+
+export interface Edges {
+  start: "left" | "right";
+  end: "left" | "right";
+}
+
+export function useEdges(): Edges {
+  return edgesFor(useLanguageStore((s) => s.language));
+}
