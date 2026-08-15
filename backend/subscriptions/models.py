@@ -5,6 +5,8 @@ from django.db import models
 from accounts.models import User
 from common.constants import (
     DEFAULT_GOLD_PRICE,
+    DEFAULT_PAYOUT_PER_LISTENER,
+    DEFAULT_PAYOUT_PER_STREAM,
     DEFAULT_SILVER_PRICE,
     PaymentStatus,
     SubscriptionTier,
@@ -21,6 +23,17 @@ class PlatformSettings(models.Model):
 
     silver_price = models.PositiveIntegerField(default=DEFAULT_SILVER_PRICE)
     gold_price = models.PositiveIntegerField(default=DEFAULT_GOLD_PRICE)
+
+    # Artist payout rates, in Toman. Editable at runtime for the same reason
+    # prices are: the admin can retune payouts without a code change.
+    payout_per_stream = models.PositiveIntegerField(
+        default=DEFAULT_PAYOUT_PER_STREAM,
+        help_text="Toman paid per recorded stream",
+    )
+    payout_per_listener = models.PositiveIntegerField(
+        default=DEFAULT_PAYOUT_PER_LISTENER,
+        help_text="Toman paid per unique listener in the period",
+    )
 
     class Meta:
         verbose_name = "platform settings"

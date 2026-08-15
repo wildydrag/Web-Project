@@ -4,6 +4,7 @@ import secrets
 
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
+from django.utils import timezone
 
 from common.constants import (
     ArtistStatus,
@@ -96,6 +97,31 @@ class User(PrefixedIDModel, AbstractBaseUser, PermissionsMixin):
     @property
     def is_admin(self) -> bool:
         return self.role == Role.ADMIN
+
+    @property
+    def subscription_is_active(self) -> bool:
+        """A paid plan is only in force until its renewal date passes.
+
+        Basic is free and never lapses; a paid tier without a renewal date is
+        treated as lapsed rather than perpetual, so a missing date can never
+        hand out free privileges.
+        """
+        if self.subscription_tier == SubscriptionTier.BASIC:
+            return True
+        return (
+            self.subscription_renews_at is not None
+            and self.subscription_renews_at > timezone.now()
+        )
+
+    @property
+    def current_tier(self) -> str:
+        """The tier actually in force. A lapsed paid plan falls back to basic.
+
+        Every entitlement check reads this rather than ``subscription_tier``,
+        so an expired subscription stops granting privileges the moment it
+        lapses — without depending on a scheduled job having run.
+        """
+        return self.subscription_tier if self.subscription_is_active else SubscriptionTier.BASIC
 
 
 class UserPreferences(models.Model):

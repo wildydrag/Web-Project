@@ -4,6 +4,8 @@ Aggregates are computed here with the ORM (Count/Sum) and returned as numbers โ€
 never as raw object lists for the frontend to reduce (spec ยง7.3).
 """
 
+from datetime import datetime
+
 from django.db.models import Count, F
 from django.utils import timezone
 
@@ -31,7 +33,7 @@ def record_stream(user, song) -> dict:
     today_count = StreamEvent.objects.filter(
         user=user, created_at__date=timezone.localdate()
     ).count()
-    limit = TIERS[user.subscription_tier].daily_stream_limit
+    limit = TIERS[user.current_tier].daily_stream_limit
     if limit is not None and today_count >= limit:
         raise StreamCapReached()
 
@@ -93,6 +95,77 @@ def settle_payout(payout: Payout) -> Payout:
     payout.status = PayoutStatus.SETTLED
     payout.save(update_fields=["status"])
     return payout
+
+
+# --- Artist payouts --------------------------------------------------------
+
+def period_bounds(period: str) -> tuple:
+    """Start (inclusive) and end (exclusive) datetimes for a ``YYYY-MM`` period.
+
+    Periods are Gregorian year-month keys interpreted in the project timezone,
+    so a month boundary lines up with local midnight rather than UTC.
+    """
+    year, month = (int(part) for part in period.split("-"))
+    start = timezone.make_aware(datetime(year, month, 1))
+    end_year, end_month = (year + 1, 1) if month == 12 else (year, month + 1)
+    end = timezone.make_aware(datetime(end_year, end_month, 1))
+    return start, end
+
+
+def artist_metrics(artist, start, end) -> dict:
+    """Streams and unique listeners for one artist's catalogue in a period.
+
+    Both come from the :class:`~reports.models.StreamEvent` log, so the audit
+    table reflects real listening rather than a stored estimate.
+    """
+    events = StreamEvent.objects.filter(
+        song__artists=artist, created_at__gte=start, created_at__lt=end
+    )
+    return {
+        "total_streams": events.count(),
+        "unique_listeners": events.values("user").distinct().count(),
+    }
+
+
+def reward_for(total_streams: int, unique_listeners: int, settings=None) -> int:
+    """The payout formula, in Toman.
+
+    A per-stream rate rewards volume and a per-listener rate rewards reach, so
+    an artist played many times by few people is not paid the same as one heard
+    by a wide audience. Both rates live in :class:`PlatformSettings` and are
+    admin-editable, so tuning the payout needs no code change.
+    """
+    settings = settings or PlatformSettings.load()
+    return (
+        total_streams * settings.payout_per_stream
+        + unique_listeners * settings.payout_per_listener
+    )
+
+
+def recalculate_payouts(period: str) -> list[Payout]:
+    """Rebuild every approved artist's payout row for ``period``.
+
+    Idempotent: re-running refreshes the figures. Rows already marked settled
+    keep that status so a recalculation cannot un-pay an artist.
+    """
+    start, end = period_bounds(period)
+    settings = PlatformSettings.load()
+    rows = []
+    for artist in Artist.objects.filter(status=ArtistStatus.APPROVED):
+        metrics = artist_metrics(artist, start, end)
+        payout, _ = Payout.objects.update_or_create(
+            artist=artist,
+            period=period,
+            defaults={
+                "total_streams": metrics["total_streams"],
+                "unique_listeners": metrics["unique_listeners"],
+                "reward_toman": reward_for(
+                    metrics["total_streams"], metrics["unique_listeners"], settings
+                ),
+            },
+        )
+        rows.append(payout)
+    return rows
 
 
 # --- internals -------------------------------------------------------------

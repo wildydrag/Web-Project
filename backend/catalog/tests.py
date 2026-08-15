@@ -108,6 +108,25 @@ def test_publish_fans_out_new_release_to_followers(api, auth, approved_artist, m
     assert Notification.objects.filter(user=follower, kind="new_release").count() == 1
 
 
+def test_earnings_are_computed_server_side_for_the_owning_artist(api, auth, approved_artist, catalog):
+    """Money is never derived in the browser (brief §7.3)."""
+    from reports.services import reward_for
+    user, _artist = approved_artist
+    song = catalog["normal"]
+    body = auth(user).get(f"/api/songs/{song.id}/").json()
+    assert body["revenueToman"] == reward_for(song.stream_count, song.listener_count)
+
+
+def test_earnings_are_hidden_from_other_listeners(api, auth, listener, catalog):
+    body = auth(listener).get(f"/api/songs/{catalog['normal'].id}/").json()
+    assert "revenueToman" not in body
+
+
+def test_staff_may_see_earnings(api, auth, admin, catalog):
+    body = auth(admin).get(f"/api/songs/{catalog['normal'].id}/").json()
+    assert "revenueToman" in body
+
+
 def test_publish_album_multipart_with_json_tracks(api, auth, approved_artist):
     """The UI sends album tracks as a JSON string when a cover file is attached."""
     import json

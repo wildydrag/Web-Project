@@ -22,11 +22,17 @@ class TicketMessageSerializer(serializers.ModelSerializer):
 class TicketSerializer(serializers.ModelSerializer):
     user_id = serializers.CharField(read_only=True)
     user_name = serializers.CharField(source="user.display_name", read_only=True)
+    # The support table lists the reporter's email, so it is joined here rather
+    # than looked up per row by the client.
+    user_email = serializers.EmailField(source="user.email", read_only=True)
     messages = TicketMessageSerializer(many=True, read_only=True)
 
     class Meta:
         model = Ticket
-        fields = ["id", "user_id", "user_name", "subject", "status", "created_at", "messages"]
+        fields = [
+            "id", "user_id", "user_name", "user_email", "subject", "status",
+            "created_at", "messages",
+        ]
 
 
 class TicketCreateSerializer(serializers.Serializer):

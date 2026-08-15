@@ -43,10 +43,8 @@ import { formatCompact, formatToman } from "@/lib/format";
 import { useDb } from "@/lib/stores/db-store";
 import type { Album, Song } from "@/lib/types";
 
-/** Rough payout estimate; Phase 2 replaces this with the real reward formula. */
-function estimateRevenue(streams: number): number {
-  return Math.round(streams * 0.002);
-}
+// Earnings are calculated by the backend with the same rates that drive the
+// admin payout table, so the studio only displays the figure it is given.
 
 type Work =
   | { kind: "album"; album: Album }
@@ -68,6 +66,7 @@ export function WorkItem({ work }: { work: Work }) {
           genre: work.album.genre,
           listeners: work.album.listenerCount,
           streams: work.album.streamCount,
+          revenue: work.album.revenueToman ?? 0,
           typeLabel: "آلبوم",
         }
       : {
@@ -77,6 +76,7 @@ export function WorkItem({ work }: { work: Work }) {
           genre: work.song.genre,
           listeners: work.song.listenerCount,
           streams: work.song.streamCount,
+          revenue: work.song.revenueToman ?? 0,
           typeLabel: "تک‌آهنگ",
         };
 
@@ -127,7 +127,7 @@ export function WorkItem({ work }: { work: Work }) {
         </span>
         <span className="flex items-center gap-1" title="درآمد تخمینی">
           <Wallet className="size-4" />
-          {formatToman(estimateRevenue(data.streams))}
+          {formatToman(data.revenue)}
         </span>
       </div>
 

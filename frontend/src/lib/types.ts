@@ -65,6 +65,8 @@ export interface User {
   subscriptionTier: SubscriptionTier;
   /** When the current paid subscription ends (undefined for basic). */
   subscriptionRenewsAt?: string;
+  /** False once a paid plan has lapsed; `subscriptionTier` then reads `basic`. */
+  subscriptionIsActive?: boolean;
   /** Ids of users/artists this account follows. */
   followingIds: string[];
   followerCount: number;
@@ -121,6 +123,9 @@ export interface Song {
   listenerCount: number;
   /** Gold-tier early access before public release. */
   earlyAccess: boolean;
+  /** Earnings in Toman, computed by the backend. Present only for the
+   *  credited artist and staff. */
+  revenueToman?: number;
 }
 
 export interface Album {
@@ -135,6 +140,8 @@ export interface Album {
   streamCount: number;
   listenerCount: number;
   earlyAccess: boolean;
+  /** Earnings in Toman, computed by the backend (artist/staff only). */
+  revenueToman?: number;
 }
 
 export interface Playlist {
@@ -174,6 +181,8 @@ export interface Ticket {
   id: string; // human-readable, e.g. TK-1042
   userId: string;
   userName: string;
+  /** Reporter's email, joined by the backend for the support table. */
+  userEmail?: string;
   subject: string;
   status: TicketStatus;
   createdAt: string;

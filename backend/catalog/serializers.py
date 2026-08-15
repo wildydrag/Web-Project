@@ -21,6 +21,19 @@ def _abs_url(file, context):
     return request.build_absolute_uri(file.url) if request else file.url
 
 
+def _may_see_earnings(release, context) -> bool:
+    """Only a credited artist (or staff) may see what a release earned."""
+    user = getattr(context.get("request"), "user", None)
+    if not user or not user.is_authenticated:
+        return False
+    if user.is_platform_staff:
+        return True
+    artist = getattr(user, "artist", None)
+    if artist is None:
+        return False
+    return any(credit.artist_id == artist.id for credit in release.artist_credits.all())
+
+
 # --- Read serializers ------------------------------------------------------
 
 class ArtistSerializer(serializers.ModelSerializer):
@@ -57,7 +70,7 @@ class ArtistSerializer(serializers.ModelSerializer):
             return False
         if user.is_platform_staff or artist.user_id == user.id:
             return True
-        return TIERS[user.subscription_tier].can_view_stats
+        return TIERS[user.current_tier].can_view_stats
 
 
 class SongSerializer(serializers.ModelSerializer):
@@ -65,13 +78,14 @@ class SongSerializer(serializers.ModelSerializer):
     genre = GenreField(read_only=True)
     cover_url = serializers.SerializerMethodField()
     audio_url = serializers.SerializerMethodField()
+    revenue_toman = serializers.SerializerMethodField()
 
     class Meta:
         model = Song
         fields = [
             "id", "title", "artist_ids", "album_id", "cover_seed", "cover_url",
             "audio_url", "duration_sec", "genre", "release_date", "lyrics",
-            "stream_count", "listener_count", "early_access",
+            "stream_count", "listener_count", "early_access", "revenue_toman",
         ]
 
     def get_artist_ids(self, obj) -> list[str]:
@@ -83,6 +97,22 @@ class SongSerializer(serializers.ModelSerializer):
     def get_audio_url(self, obj):
         return _abs_url(obj.audio, self.context)
 
+    def get_revenue_toman(self, obj) -> int:
+        """Earnings for this track, using the same rates as the payout table.
+
+        Computed server-side so the studio never derives money in the browser,
+        and so one formula governs both the artist's view and the admin audit.
+        """
+        from reports.services import reward_for
+        return reward_for(obj.stream_count, obj.listener_count)
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # Earnings are private: only the credited artist and staff may see them.
+        if not _may_see_earnings(instance, self.context):
+            data.pop("revenue_toman", None)
+        return data
+
 
 class AlbumSerializer(serializers.ModelSerializer):
     artist_ids = serializers.SerializerMethodField()
@@ -91,12 +121,14 @@ class AlbumSerializer(serializers.ModelSerializer):
     cover_url = serializers.SerializerMethodField()
     stream_count = serializers.SerializerMethodField()
     listener_count = serializers.SerializerMethodField()
+    revenue_toman = serializers.SerializerMethodField()
 
     class Meta:
         model = Album
         fields = [
             "id", "title", "artist_ids", "cover_seed", "cover_url", "release_date",
-            "genre", "type", "song_ids", "stream_count", "listener_count", "early_access",
+            "genre", "type", "song_ids", "stream_count", "listener_count",
+            "early_access", "revenue_toman",
         ]
 
     def get_artist_ids(self, obj) -> list[str]:
@@ -113,6 +145,17 @@ class AlbumSerializer(serializers.ModelSerializer):
 
     def get_cover_url(self, obj):
         return _abs_url(obj.cover, self.context)
+
+    def get_revenue_toman(self, obj) -> int:
+        """Album earnings, aggregated from its tracks by the same formula."""
+        from reports.services import reward_for
+        return reward_for(self.get_stream_count(obj), self.get_listener_count(obj))
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if not _may_see_earnings(instance, self.context):
+            data.pop("revenue_toman", None)
+        return data
 
 
 # --- Write serializers (artist studio) -------------------------------------

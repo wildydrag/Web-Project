@@ -13,6 +13,7 @@ from datetime import datetime
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from django.utils import timezone
 from django.utils.dateparse import parse_date
 
 from accounts.models import Artist, Follow, User, UserPreferences
@@ -149,16 +150,16 @@ USERS = [
          subscription_tier="basic", following=[], is_staff=True, is_superuser=True),
     dict(id="us_mahtab", email="ar_mahtab@nava.app", role="artist", display_name="مهتاب",
          username="@nava_artist_10", avatar_seed="mahtab", gender="unspecified",
-         subscription_tier="gold", following=[]),
+         subscription_tier="gold", subscription_renews_at="2027-01-01T00:00:00Z", following=[]),
     dict(id="us_kaveh", email="ar_kaveh@nava.app", role="artist", display_name="کاوه",
          username="@nava_artist_11", avatar_seed="kaveh", gender="unspecified",
-         subscription_tier="gold", following=[]),
+         subscription_tier="gold", subscription_renews_at="2027-01-01T00:00:00Z", following=[]),
     dict(id="us_shabdiz", email="ar_shabdiz@nava.app", role="artist", display_name="شبدیز",
          username="@nava_artist_12", avatar_seed="shabdiz", gender="unspecified",
-         subscription_tier="gold", following=[]),
+         subscription_tier="gold", subscription_renews_at="2027-01-01T00:00:00Z", following=[]),
     dict(id="us_ava", email="ar_ava@nava.app", role="artist", display_name="آوا بَند",
          username="@nava_artist_13", avatar_seed="ava", gender="unspecified",
-         subscription_tier="gold", following=[]),
+         subscription_tier="gold", subscription_renews_at="2027-01-01T00:00:00Z", following=[]),
 ]
 
 PLAYLISTS = [
@@ -217,8 +218,9 @@ class Command(BaseCommand):
         self._seed_playlists(songs)
         self._seed_notifications()
         self._seed_tickets()
-        self._seed_payouts(artists)
+        self._seed_listening_history(songs)
         self._seed_daily_streams(songs)
+        self._seed_payouts(artists)
 
         self.stdout.write(self.style.SUCCESS(
             f"Seeded: {User.objects.count()} users, {Artist.objects.count()} artists, "
@@ -332,22 +334,44 @@ class Command(BaseCommand):
                 )
                 TicketMessage.objects.filter(pk=m.pk).update(created_at=_dt(msg_created))
 
+    def _seed_listening_history(self, songs):
+        """Create a month of plays so the payout report has real data to sum.
+
+        Payouts are derived from :class:`StreamEvent`, so without a history the
+        auditing table would legitimately read zero. Volumes are deterministic
+        (no randomness) to keep runs reproducible, and each song gets a
+        different-sized audience so the per-artist figures differ.
+        """
+        listeners = list(User.objects.filter(role__in=[Role.LISTENER, Role.ARTIST]))
+        events = []
+        for index, (song_id, song) in enumerate(sorted(songs.items())):
+            # 4-13 distinct listeners per track, each playing it 1-3 times.
+            audience = listeners[: 4 + (index % 10)]
+            for position, listener in enumerate(audience):
+                for _ in range(1 + (index + position) % 3):
+                    events.append(StreamEvent(user=listener, song=song))
+        StreamEvent.objects.bulk_create(events)
+        return len(events)
+
     def _seed_payouts(self, artists):
-        approved = [a for a in ARTISTS if a["status"] == ArtistStatus.APPROVED]
-        for i, a in enumerate(approved):
-            Payout.objects.create(
-                id=f"au_{i + 1}", artist=artists[a["id"]], period="1405-03",
-                unique_listeners=a["monthly_listeners"],
-                total_streams=round(a["total_streams"] / 12),
-                reward_toman=round(a["monthly_listeners"] * 0.5 + a["total_streams"] * 0.002),
-                status=PayoutStatus.PENDING if i % 2 == 0 else PayoutStatus.SETTLED,
-            )
+        """Build the audit table from the seeded history using the real formula."""
+        from reports.services import recalculate_payouts
+
+        period = timezone.localdate().strftime("%Y-%m")
+        payouts = recalculate_payouts(period)
+        # Mark alternate rows settled so both payment states are visible in the UI.
+        for i, payout in enumerate(sorted(payouts, key=lambda p: p.artist.name)):
+            if i % 2:
+                payout.status = PayoutStatus.SETTLED
+                payout.save(update_fields=["status"])
 
     def _seed_daily_streams(self, songs):
-        """Give the basic demo user 47 plays *today* so the daily cap (60) is
-        near its limit — useful for demoing/testing the remaining-streams UI."""
+        """Top the basic demo user up to 47 plays *today* so the daily cap (60)
+        is near its limit — useful for demoing the remaining-streams UI."""
         basic = User.objects.get(id="us_basic")
-        song = songs["sg_01"]
+        today = timezone.localdate()
+        already = StreamEvent.objects.filter(user=basic, created_at__date=today).count()
+        missing = max(0, 47 - already)
         StreamEvent.objects.bulk_create(
-            [StreamEvent(user=basic, song=song) for _ in range(47)]
+            [StreamEvent(user=basic, song=songs["sg_01"]) for _ in range(missing)]
         )
