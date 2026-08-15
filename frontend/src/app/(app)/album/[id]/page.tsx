@@ -35,6 +35,7 @@ export default function AlbumPage() {
       <header className="flex flex-col gap-5 sm:flex-row sm:items-end">
         <CoverArt
           seed={album.coverSeed}
+          url={album.coverUrl}
           label={album.title}
           className="w-40 shrink-0 sm:w-52"
           rounded="rounded-2xl"

@@ -76,6 +76,7 @@ export function SongRow({
 
       <CoverArt
         seed={song.coverSeed}
+        url={song.coverUrl}
         label={song.title}
         className="size-10 shrink-0"
         rounded="rounded-md"

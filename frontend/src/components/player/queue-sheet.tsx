@@ -68,6 +68,7 @@ export function QueueSheet() {
                     >
                       <CoverArt
                         seed={song.coverSeed}
+                        url={song.coverUrl}
                         label={song.title}
                         className="size-10"
                         rounded="rounded-md"

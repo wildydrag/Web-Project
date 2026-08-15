@@ -65,6 +65,7 @@ export function WorkItem({ work }: { work: Work }) {
           id: work.album.id,
           title: work.album.title,
           coverSeed: work.album.coverSeed,
+          coverUrl: work.album.coverUrl,
           genre: work.album.genre,
           listeners: work.album.listenerCount,
           streams: work.album.streamCount,
@@ -75,6 +76,7 @@ export function WorkItem({ work }: { work: Work }) {
           id: work.song.id,
           title: work.song.title,
           coverSeed: work.song.coverSeed,
+          coverUrl: work.song.coverUrl,
           genre: work.song.genre,
           listeners: work.song.listenerCount,
           streams: work.song.streamCount,
@@ -107,6 +109,7 @@ export function WorkItem({ work }: { work: Work }) {
     <div className="flex items-center gap-3 rounded-xl border bg-card p-3">
       <CoverArt
         seed={data.coverSeed}
+        url={data.coverUrl}
         label={data.title}
         className="size-14 shrink-0"
         rounded="rounded-lg"

@@ -33,7 +33,7 @@ export function SongCard({ song, context }: { song: Song; context?: string[] }) 
     <div className="group rounded-xl p-2 transition-colors hover:bg-accent/50">
       <div className="relative mb-2">
         <button onClick={play} className="block w-full" aria-label={t("پخش {title}", { title: song.title })}>
-          <CoverArt seed={song.coverSeed} label={song.title} rounded="rounded-lg" />
+         <CoverArt seed={song.coverSeed} url={song.coverUrl} label={song.title} rounded="rounded-lg" /> 
         </button>
         <CardPlayButton onClick={play} playing={isCurrent && isPlaying} />
       </div>

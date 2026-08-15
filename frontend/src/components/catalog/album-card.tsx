@@ -29,7 +29,7 @@ export function AlbumCard({ album }: { album: Album }) {
   return (
     <div className="group rounded-xl p-2 transition-colors hover:bg-accent/50">
       <Link href={`/album/${album.id}`} className="relative mb-2 block">
-        <CoverArt seed={album.coverSeed} label={album.title} rounded="rounded-lg" />
+        <CoverArt seed={album.coverSeed} url={album.coverUrl} label={album.title} rounded="rounded-lg" />
         <CardPlayButton onClick={play} playing={playingThisAlbum && isPlaying} />
       </Link>
       <Link

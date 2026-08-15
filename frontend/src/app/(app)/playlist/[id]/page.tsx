@@ -90,6 +90,7 @@ export default function PlaylistDetailPage() {
       <header className="flex flex-col gap-5 sm:flex-row sm:items-end">
         <CoverArt
           seed={playlist.coverSeed}
+          url={playlist.coverUrl}
           label={playlist.name}
           className="w-40 shrink-0 sm:w-52"
           rounded="rounded-2xl"

@@ -63,6 +63,7 @@ export function PlayerBar() {
         <div className="flex min-w-0 items-center gap-3">
           <CoverArt
             seed={song.coverSeed}
+            url={song.coverUrl}
             label={song.title}
             className="size-14"
             rounded="rounded-lg"
@@ -115,6 +116,7 @@ export function PlayerBar() {
         >
           <CoverArt
             seed={song.coverSeed}
+            url={song.coverUrl}
             label={song.title}
             className="size-11"
             rounded="rounded-md"

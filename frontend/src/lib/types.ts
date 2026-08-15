@@ -115,6 +115,10 @@ export interface Song {
   /** Set when the track is part of an album; undefined for a single. */
   albumId?: string;
   coverSeed: string;
+  /** Absolute URL to the uploaded cover image, when the artist attached one. */
+  coverUrl?: string | null;
+  /** Absolute URL to the uploaded audio file, when the artist attached one. */
+  audioUrl?: string | null;
   durationSec: number;
   genre: string;
   releaseDate: string;
@@ -133,6 +137,8 @@ export interface Album {
   title: string;
   artistIds: string[];
   coverSeed: string;
+  /** Absolute URL to the uploaded cover image, when the artist attached one. */
+  coverUrl?: string | null;
   releaseDate: string;
   genre: string;
   type: ReleaseType;
@@ -143,12 +149,13 @@ export interface Album {
   /** Earnings in Toman, computed by the backend (artist/staff only). */
   revenueToman?: number;
 }
-
 export interface Playlist {
   id: string;
   ownerId: string;
   name: string;
   coverSeed: string;
+  /** Absolute URL to an uploaded cover image, when one is set. */
+  coverUrl?: string | null;
   songIds: string[];
   createdAt: string;
 }

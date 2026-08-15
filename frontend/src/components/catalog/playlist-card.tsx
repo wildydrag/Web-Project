@@ -18,7 +18,7 @@ export function PlaylistCard({ playlist }: { playlist: Playlist }) {
   return (
     <div className="group rounded-xl p-2 transition-colors hover:bg-accent/50">
       <Link href={`/playlist/${playlist.id}`} className="relative mb-2 block">
-        <CoverArt seed={playlist.coverSeed} label={playlist.name} rounded="rounded-lg" />
+        <CoverArt seed={playlist.coverSeed} url={playlist.coverUrl} label={playlist.name} rounded="rounded-lg" />
         {count > 0 ? (
           <CardPlayButton
             onClick={(event) => {

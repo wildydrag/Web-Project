@@ -61,6 +61,7 @@ export function FullScreenPlayer() {
         ) : (
           <CoverArt
             seed={song.coverSeed}
+            url={song.coverUrl}
             label={song.title}
             className="w-full max-w-xs"
             rounded="rounded-3xl"
