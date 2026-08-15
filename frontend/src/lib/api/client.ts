@@ -6,8 +6,16 @@
  * kept in localStorage; a 401 triggers a single refresh-and-retry.
  */
 
+/**
+ * Where the API lives, from the browser's point of view.
+ *
+ * Docker Compose passes this in at build time. The fallback is the port the
+ * README tells you to run the backend on, so a fresh clone with no `.env.local`
+ * still talks to a manually started backend instead of failing with
+ * "could not reach the server".
+ */
 const BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "http://localhost:8000/api";
+  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "http://localhost:8001/api";
 
 const ACCESS_KEY = "nava-access";
 const REFRESH_KEY = "nava-refresh";
