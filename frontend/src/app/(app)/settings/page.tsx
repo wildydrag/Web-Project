@@ -34,6 +34,7 @@ import { Switch } from "@/components/ui/switch";
 import { TIERS, TIER_ORDER, UNLIMITED } from "@/lib/config";
 import { formatToman, toFaDigits } from "@/lib/format";
 import { useDb } from "@/lib/stores/db-store";
+import { useLanguageStore } from "@/lib/i18n";
 import { usePlayer } from "@/lib/stores/player-store";
 import { useCurrentUser } from "@/lib/stores/session-store";
 import { useSession } from "@/lib/stores/session-store";
@@ -87,6 +88,7 @@ export default function SettingsPage() {
   const user = useCurrentUser();
   const prices = useDb((s) => s.settings.prices);
   const updateUser = useDb((s) => s.updateUser);
+  const setLanguage = useLanguageStore((s) => s.setLanguage);
   const deleteUser = useDb((s) => s.deleteUser);
   const logout = useSession((s) => s.logout);
   const volume = usePlayer((s) => s.volume);
@@ -145,7 +147,11 @@ export default function SettingsPage() {
           control={
             <Select
               value={user.preferences.language}
-              onValueChange={(v) => setPref({ language: v as "fa" | "en" })}
+              onValueChange={(v) => {
+                const language = v as "fa" | "en";
+                setLanguage(language); // switch the interface now
+                setPref({ language }); // and remember it on the server
+              }}
             >
               <SelectTrigger className="h-9 w-32">
                 <SelectValue />

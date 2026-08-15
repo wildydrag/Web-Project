@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { ThemeProvider } from "next-themes";
 
+import { LanguageSync } from "@/components/language-sync";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
@@ -33,6 +34,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     >
       <TooltipProvider delay={250}>{children}</TooltipProvider>
       <Toaster position="top-center" />
+      <LanguageSync />
       <ServiceWorkerRegister />
     </ThemeProvider>
   );

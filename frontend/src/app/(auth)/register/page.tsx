@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSession } from "@/lib/stores/session-store";
+import { registerErrorMessage } from "@/lib/api/errors";
 
 // ── Validation schemas ──────────────────────────────────────────────────────
 
@@ -82,10 +83,9 @@ function ListenerSignUp() {
       });
       toast.success("حساب شما ساخته شد. خوش آمدید!");
       router.replace("/home");
-    } catch {
-      toast.error("ثبت‌نام ناموفق بود", {
-        description: "ممکن است این ایمیل قبلاً ثبت شده باشد.",
-      });
+    } catch (error) {
+      const { title, description } = registerErrorMessage(error);
+      toast.error(title, { description });
     }
   }
 
@@ -214,10 +214,9 @@ function ArtistSignUp() {
         description: "حساب شما در وضعیت «در انتظار تایید» قرار گرفت.",
       });
       router.replace("/home");
-    } catch {
-      toast.error("ثبت‌نام ناموفق بود", {
-        description: "ممکن است این ایمیل قبلاً ثبت شده باشد.",
-      });
+    } catch (error) {
+      const { title, description } = registerErrorMessage(error);
+      toast.error(title, { description });
     }
   }
 

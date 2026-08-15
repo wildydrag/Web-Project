@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import type { NavItem } from "@/lib/navigation";
 import { toFaDigits } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 /** Shared vertical nav list used by both the desktop sidebar and mobile drawer. */
 export function NavLinks({
@@ -19,6 +20,7 @@ export function NavLinks({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
+  const t = useT();
 
   return (
     <nav className="flex flex-col gap-1">
@@ -41,7 +43,7 @@ export function NavLinks({
             )}
           >
             <item.icon className="size-[18px] shrink-0" />
-            <span className="flex-1 truncate">{item.label}</span>
+            <span className="flex-1 truncate">{t(item.label)}</span>
             {count ? (
               <span className="tabular flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-medium text-primary-foreground">
                 {toFaDigits(count)}

@@ -37,16 +37,57 @@ export class ApiError extends Error {
     super(`API ${status}`);
     this.name = "ApiError";
   }
+
+  /**
+   * The first human-readable message the server sent, if any.
+   *
+   * DRF replies either `{detail: "..."}` or `{errors: {field: ["..."]}}`
+   * (see `common.exceptions`). Surfacing this is what lets the UI say *why*
+   * a request failed instead of guessing.
+   */
+  get firstMessage(): string | null {
+    const data = this.data as
+      | { detail?: string; errors?: Record<string, string[] | string> }
+      | null;
+    if (!data) return null;
+    if (typeof data.detail === "string") return data.detail;
+    const errors = data.errors;
+    if (errors) {
+      for (const value of Object.values(errors)) {
+        const message = Array.isArray(value) ? value[0] : value;
+        if (typeof message === "string" && message.trim()) return message;
+      }
+    }
+    return null;
+  }
+}
+
+/**
+ * The request never reached the server — it is down, on another port, or
+ * blocked by CORS. Distinct from {@link ApiError} so the UI can tell the user
+ * to start the backend rather than blaming their credentials.
+ */
+export class NetworkError extends Error {
+  constructor(cause?: unknown) {
+    super("network");
+    this.name = "NetworkError";
+    this.cause = cause;
+  }
 }
 
 async function refreshAccess(): Promise<boolean> {
   const refresh = tokenStore.refresh;
   if (!refresh) return false;
-  const res = await fetch(`${BASE_URL}/auth/token/refresh/`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ refresh }),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${BASE_URL}/auth/token/refresh/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh }),
+    });
+  } catch {
+    return false; // offline: fall through to the original 401
+  }
   if (!res.ok) return false;
   const data = (await res.json()) as { access: string; refresh?: string };
   tokenStore.set(data.access, data.refresh);
@@ -73,9 +114,19 @@ async function request<T>(method: string, path: string, opts: RequestOptions = {
     return { method, headers, body };
   };
 
-  let res = await fetch(`${BASE_URL}${path}`, build());
+  // A failed `fetch` means the request never reached the server; that is a very
+  // different problem from the server rejecting it, so it gets its own error.
+  const send = async () => {
+    try {
+      return await fetch(`${BASE_URL}${path}`, build());
+    } catch (error) {
+      throw new NetworkError(error);
+    }
+  };
+
+  let res = await send();
   if (res.status === 401 && (await refreshAccess())) {
-    res = await fetch(`${BASE_URL}${path}`, build());
+    res = await send();
   }
 
   if (!res.ok) {
