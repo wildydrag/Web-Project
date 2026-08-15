@@ -16,9 +16,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ROLE_LABELS } from "@/lib/config";
 import { useSession, useCurrentUser } from "@/lib/stores/session-store";
+import { useT } from "@/lib/i18n";
 
 /** Avatar button that opens the account menu (profile, settings, theme, logout). */
 export function UserMenu() {
+  const t = useT();
   const user = useCurrentUser();
   const logout = useSession((s) => s.logout);
   const router = useRouter();
@@ -36,7 +38,7 @@ export function UserMenu() {
         render={
           <button
             className="flex items-center gap-2 rounded-full p-0.5 outline-none transition-colors hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50"
-            aria-label="حساب کاربری"
+            aria-label={t("حساب کاربری")}
           />
         }
       >
@@ -58,29 +60,29 @@ export function UserMenu() {
         </div>
         <div className="flex items-center justify-between px-2 pb-1.5">
           <TierBadge tier={user.subscriptionTier} />
-          <span className="text-xs text-muted-foreground">{ROLE_LABELS[user.role]}</span>
+          <span className="text-xs text-muted-foreground">{t(ROLE_LABELS[user.role])}</span>
         </div>
 
         <DropdownMenuSeparator />
         <DropdownMenuItem nativeButton={false} render={<Link href="/profile" />}>
           <UserIcon />
-          نمایه من
+          {t("نمایه من")}
         </DropdownMenuItem>
         <DropdownMenuItem nativeButton={false} render={<Link href="/settings" />}>
           <Settings />
-          تنظیمات
+          {t("تنظیمات")}
         </DropdownMenuItem>
 
         <DropdownMenuSeparator />
         <div className="flex items-center justify-between px-2 py-1">
-          <span className="text-sm text-muted-foreground">پوسته</span>
+          <span className="text-sm text-muted-foreground">{t("پوسته")}</span>
           <ThemeToggle />
         </div>
 
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onClick={handleLogout}>
           <LogOut />
-          خروج از حساب
+          {t("خروج از حساب")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

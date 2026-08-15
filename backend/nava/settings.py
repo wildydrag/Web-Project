@@ -158,9 +158,22 @@ CORS_ALLOWED_ORIGINS = env_list(
 )
 
 # --- Payments --------------------------------------------------------------
-PAYMENT_GATEWAY = os.getenv("PAYMENT_GATEWAY", "fake")
-ZARINPAL_MERCHANT_ID = os.getenv("ZARINPAL_MERCHANT_ID", "")
+# ZarinPal's sandbox is the default so the checkout screen exercises a real
+# gateway out of the box. Set PAYMENT_GATEWAY=fake for offline work — the test
+# suite does exactly that, so no test ever depends on the network.
+PAYMENT_GATEWAY = os.getenv("PAYMENT_GATEWAY", "zarinpal")
+
+# The sandbox does not authenticate merchants: any well-formed UUID is accepted,
+# and this one was generated for the project. A real deployment overrides it
+# with the merchant id issued by ZarinPal.
+ZARINPAL_MERCHANT_ID = os.getenv(
+    "ZARINPAL_MERCHANT_ID", "b8f1e2c4-3a67-4d5b-9c81-2f4e6a0d7b39"
+)
 ZARINPAL_SANDBOX = env_bool("ZARINPAL_SANDBOX", True)
+
+# Where ZarinPal sends the browser after payment. It must be a page in the
+# frontend, which reads the Authority/Status parameters and asks the API to
+# verify — the redirect itself is not proof of payment.
 PAYMENT_CALLBACK_URL = os.getenv(
-    "PAYMENT_CALLBACK_URL", "http://localhost:3000/settings?payment=callback"
+    "PAYMENT_CALLBACK_URL", "http://localhost:3000/payment/callback"
 )

@@ -41,8 +41,10 @@ import { toFaDigits } from "@/lib/format";
 import { usePlayback } from "@/lib/hooks/use-playback";
 import { useDb } from "@/lib/stores/db-store";
 import { useCurrentUser } from "@/lib/stores/session-store";
+import { useT } from "@/lib/i18n";
 
 export default function PlaylistDetailPage() {
+  const t = useT();
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const playlists = useDb((s) => s.playlists);
@@ -57,7 +59,7 @@ export default function PlaylistDetailPage() {
   const [name, setName] = useState("");
 
   const playlist = byId(playlists, id);
-  if (!playlist) return <NotFoundBlock title="پلی‌لیست یافت نشد" backHref="/playlists" />;
+  if (!playlist) return <NotFoundBlock title={t("پلی‌لیست یافت نشد")} backHref="/playlists" />;
 
   const tracks = getSongsByIds(songs, playlist.songIds);
   const isOwner = user?.id === playlist.ownerId;
@@ -73,13 +75,13 @@ export default function PlaylistDetailPage() {
     if (!trimmed) return;
     renamePlaylist(playlist!.id, trimmed);
     setRenameOpen(false);
-    toast.success("نام پلی‌لیست تغییر کرد");
+    toast.success(t("نام پلی‌لیست تغییر کرد"));
   }
 
   function confirmDelete() {
     deletePlaylist(playlist!.id);
     setDeleteOpen(false);
-    toast.success("پلی‌لیست حذف شد");
+    toast.success(t("پلی‌لیست حذف شد"));
     router.replace("/playlists");
   }
 
@@ -93,33 +95,33 @@ export default function PlaylistDetailPage() {
           rounded="rounded-2xl"
         />
         <div className="flex-1 space-y-3">
-          <span className="text-xs font-medium text-muted-foreground">پلی‌لیست</span>
+          <span className="text-xs font-medium text-muted-foreground">{t("پلی‌لیست")}</span>
           <h1 className="font-heading text-3xl font-bold">{playlist.name}</h1>
-          <p className="text-sm text-muted-foreground">{toFaDigits(tracks.length)} آهنگ</p>
+          <p className="text-sm text-muted-foreground">{t("{n} آهنگ", { n: toFaDigits(tracks.length) })}</p>
           <div className="flex flex-wrap items-center gap-2">
             <Button onClick={() => playList(playlist.songIds, 0)} disabled={tracks.length === 0}>
               <Play className="fill-current" />
-              پخش
+              {t("پخش")}
             </Button>
             <Button variant="outline" render={<Link href="/library" />}>
               <ListPlus />
-              افزودن آهنگ
+              {t("افزودن آهنگ")}
             </Button>
             {isOwner ? (
               <DropdownMenu>
                 <DropdownMenuTrigger
-                  render={<Button variant="ghost" size="icon" aria-label="گزینه‌ها" />}
+                  render={<Button variant="ghost" size="icon" aria-label={t("گزینه‌ها")} />}
                 >
                   <MoreHorizontal />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={openRename}>
                     <Pencil />
-                    تغییر نام
+                    {t("تغییر نام")}
                   </DropdownMenuItem>
                   <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
                     <Trash2 />
-                    حذف پلی‌لیست
+                    {t("حذف پلی‌لیست")}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -131,9 +133,9 @@ export default function PlaylistDetailPage() {
       {tracks.length === 0 ? (
         <EmptyState
           icon={ListPlus}
-          title="این پلی‌لیست خالی است"
-          description="از آرشیو، آهنگ‌ها را با منوی «…» به این پلی‌لیست اضافه کنید."
-          action={<Button render={<Link href="/library" />}>رفتن به آرشیو</Button>}
+          title={t("این پلی‌لیست خالی است")}
+          description={t("از آرشیو، آهنگ‌ها را با منوی «…» به این پلی‌لیست اضافه کنید.")}
+          action={<Button render={<Link href="/library" />}>{t("رفتن به آرشیو")}</Button>}
         />
       ) : (
         <div className="space-y-0.5">
@@ -146,11 +148,11 @@ export default function PlaylistDetailPage() {
       <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>تغییر نام پلی‌لیست</DialogTitle>
+            <DialogTitle>{t("تغییر نام پلی‌لیست")}</DialogTitle>
           </DialogHeader>
           <form id="rename-playlist-form" onSubmit={submitRename}>
             <div className="space-y-1.5">
-              <Label htmlFor="rename">نام جدید</Label>
+              <Label htmlFor="rename">{t("نام جدید")}</Label>
               <Input
                 id="rename"
                 autoFocus
@@ -162,7 +164,7 @@ export default function PlaylistDetailPage() {
           </form>
           <DialogFooter>
             <Button type="submit" form="rename-playlist-form">
-              ذخیره
+              {t("ذخیره")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -171,13 +173,13 @@ export default function PlaylistDetailPage() {
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>حذف «{playlist.name}»؟</AlertDialogTitle>
-            <AlertDialogDescription>این عمل قابل بازگشت نیست.</AlertDialogDescription>
+            <AlertDialogTitle>{t("حذف «{name}»؟", { name: playlist.name })}</AlertDialogTitle>
+            <AlertDialogDescription>{t("این عمل قابل بازگشت نیست.")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>انصراف</AlertDialogCancel>
+            <AlertDialogCancel>{t("انصراف")}</AlertDialogCancel>
             <AlertDialogAction variant="destructive" onClick={confirmDelete}>
-              حذف
+              {t("حذف")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

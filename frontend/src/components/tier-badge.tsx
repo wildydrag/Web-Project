@@ -1,8 +1,11 @@
+"use client";
+
 import { Crown, Sparkles, Music2 } from "lucide-react";
 
 import { TIERS } from "@/lib/config";
 import type { SubscriptionTier } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 const TIER_STYLES: Record<
   SubscriptionTier,
@@ -32,6 +35,7 @@ export function TierBadge({
   className?: string;
   showLabel?: boolean;
 }) {
+  const t = useT();
   const { icon: Icon, className: tierClass } = TIER_STYLES[tier];
   return (
     <span
@@ -42,7 +46,7 @@ export function TierBadge({
       )}
     >
       <Icon className="size-3" />
-      {showLabel ? <span>{TIERS[tier].label}</span> : null}
+      {showLabel ? <span>{t(TIERS[tier].label)}</span> : null}
     </span>
   );
 }

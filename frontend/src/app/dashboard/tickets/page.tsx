@@ -16,8 +16,10 @@ import { formatShortDate } from "@/lib/format";
 import { TICKET_STATUS } from "@/lib/status-labels";
 import { useDb } from "@/lib/stores/db-store";
 import { Inbox } from "lucide-react";
+import { useT } from "@/lib/i18n";
 
 export default function TicketsPage() {
+  const t = useT();
   const router = useRouter();
   const tickets = useDb((s) => s.tickets);
 
@@ -28,23 +30,23 @@ export default function TicketsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-heading text-2xl font-bold">تیکت‌های پشتیبانی</h1>
-        <p className="text-sm text-muted-foreground">به سوالات کاربران پاسخ دهید.</p>
+        <h1 className="font-heading text-2xl font-bold">{t("تیکت‌های پشتیبانی")}</h1>
+        <p className="text-sm text-muted-foreground">{t("به سوالات کاربران پاسخ دهید.")}</p>
       </div>
 
       {sorted.length === 0 ? (
-        <EmptyState icon={Inbox} title="تیکتی وجود ندارد" />
+        <EmptyState icon={Inbox} title={t("تیکتی وجود ندارد")} />
       ) : (
         <div className="rounded-xl border">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>شناسه</TableHead>
-                <TableHead>کاربر</TableHead>
-                <TableHead className="hidden md:table-cell">ایمیل</TableHead>
-                <TableHead>موضوع</TableHead>
-                <TableHead className="hidden sm:table-cell">تاریخ</TableHead>
-                <TableHead>وضعیت</TableHead>
+                <TableHead>{t("شناسه")}</TableHead>
+                <TableHead>{t("کاربر")}</TableHead>
+                <TableHead className="hidden md:table-cell">{t("ایمیل")}</TableHead>
+                <TableHead>{t("موضوع")}</TableHead>
+                <TableHead className="hidden sm:table-cell">{t("تاریخ")}</TableHead>
+                <TableHead>{t("وضعیت")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -71,7 +73,7 @@ export default function TicketsPage() {
                       {formatShortDate(ticket.createdAt)}
                     </TableCell>
                     <TableCell>
-                      <StatusPill label={status.label} tone={status.tone} />
+                      <StatusPill label={t(status.label)} tone={status.tone} />
                     </TableCell>
                   </TableRow>
                 );

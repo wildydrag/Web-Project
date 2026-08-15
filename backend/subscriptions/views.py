@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 from common.constants import BILLING_PERIODS
 from common.permissions import IsAdmin
 
+from .gateways import PaymentGatewayError
 from .models import PlatformSettings
 from .serializers import (
     CheckoutSerializer,
@@ -39,10 +40,15 @@ class CheckoutView(APIView):
     def post(self, request):
         serializer = CheckoutSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        payment, redirect_url = create_checkout(
-            request.user, serializer.validated_data["tier"],
-            serializer.validated_data["billing_period"],
-        )
+        try:
+            payment, redirect_url = create_checkout(
+                request.user, serializer.validated_data["tier"],
+                serializer.validated_data["billing_period"],
+            )
+        except PaymentGatewayError as exc:
+            # The gateway is down or refused us. That is not the client's fault
+            # and not an internal error either — say so, and say why.
+            return Response({"detail": exc.message}, status=502)
         return Response({
             "payment_id": payment.id,
             "authority": payment.authority,

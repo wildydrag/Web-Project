@@ -28,29 +28,49 @@ def _song(genre=Genre.POP, artist_name="بنیامین"):
 
 
 class TestReasonText:
-    """Every suggestion must explain itself — that is the grading condition."""
+    """Every suggestion must explain itself — that is the grading condition.
+
+    A reason is a template plus its arguments, never a finished sentence, so the
+    frontend can render it in either language. These tests pin down both halves.
+    """
 
     def test_following_the_artist_wins_over_other_reasons(self):
-        reason = _reason(_song(), genre_share=0.9, is_followed=True, familiar_plays=5)
-        assert reason == "چون بنیامین را دنبال می‌کنید"
+        template, args = _reason(_song(), genre_share=0.9, is_followed=True, familiar_plays=5)
+        assert template == "چون {artist} را دنبال می‌کنید"
+        assert args == {"artist": "بنیامین"}
 
     def test_familiarity_is_used_when_not_following(self):
-        reason = _reason(_song(), genre_share=0.9, is_followed=False, familiar_plays=3)
-        assert reason == "چون قبلاً به بنیامین گوش داده‌اید"
+        template, args = _reason(_song(), genre_share=0.9, is_followed=False, familiar_plays=3)
+        assert template == "چون قبلاً به {artist} گوش داده‌اید"
+        assert args == {"artist": "بنیامین"}
 
     def test_genre_affinity_is_the_next_fallback(self):
-        reason = _reason(_song(Genre.ROCK), genre_share=0.4, is_followed=False, familiar_plays=0)
-        assert reason == "چون به سبک راک علاقه دارید"
+        template, args = _reason(
+            _song(Genre.ROCK), genre_share=0.4, is_followed=False, familiar_plays=0
+        )
+        assert template == "چون به سبک {genre} علاقه دارید"
+        assert args == {"genre": "راک"}
 
     def test_popularity_is_the_last_resort(self):
-        reason = _reason(_song(), genre_share=0.0, is_followed=False, familiar_plays=0)
-        assert reason == "از محبوب‌ترین‌های نوا"
+        template, args = _reason(_song(), genre_share=0.0, is_followed=False, familiar_plays=0)
+        assert template == "از محبوب‌ترین‌های نوا"
+        assert args == {}
 
     def test_a_reason_is_never_empty(self):
         for share in (0.0, 0.5):
             for followed in (True, False):
                 for familiar in (0, 4):
-                    assert _reason(_song(), share, followed, familiar).strip()
+                    template, _args = _reason(_song(), share, followed, familiar)
+                    assert template.strip()
+
+    def test_every_placeholder_has_an_argument(self):
+        # A slot with no matching argument would print `{artist}` on screen.
+        import re
+        for share in (0.0, 0.5):
+            for followed in (True, False):
+                for familiar in (0, 4):
+                    template, args = _reason(_song(), share, followed, familiar)
+                    assert set(re.findall(r"\{(\w+)\}", template)) == set(args)
 
 
 class TestGenreLabel:

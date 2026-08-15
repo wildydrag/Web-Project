@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { usePlayer } from "@/lib/stores/player-store";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 /** Mute toggle + volume slider (also bound from Settings → "صدای سامانه"). */
 export function VolumeControl({
@@ -16,6 +17,7 @@ export function VolumeControl({
   /** When true, the slider expands on hover (desktop player bar). */
   expandOnHover?: boolean;
 }) {
+  const t = useT();
   const volume = usePlayer((s) => s.volume);
   const muted = usePlayer((s) => s.muted);
   const setVolume = usePlayer((s) => s.setVolume);
@@ -26,7 +28,7 @@ export function VolumeControl({
 
   return (
     <div dir="ltr" className={cn("group/volume flex items-center", className)}>
-      <Button variant="ghost" size="icon-sm" onClick={toggleMute} aria-label="بی‌صدا">
+      <Button variant="ghost" size="icon-sm" onClick={toggleMute} aria-label={t("بی‌صدا")}>
         <Icon />
       </Button>
       <div
@@ -44,7 +46,7 @@ export function VolumeControl({
           step={1}
           onValueChange={(v) => setVolume(Array.isArray(v) ? v[0] : v)}
           className="w-24 shrink-0"
-          aria-label="میزان صدا"
+          aria-label={t("میزان صدا")}
         />
       </div>
     </div>

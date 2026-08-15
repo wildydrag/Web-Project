@@ -115,6 +115,7 @@ class RecommendationsView(APIView):
             {
                 "song": SongSerializer(rec.song, context=ctx).data,
                 "reason": rec.reason,
+                "reason_args": rec.reason_args,
                 "score": rec.score,
             }
             for rec in results

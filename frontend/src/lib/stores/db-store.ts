@@ -27,6 +27,7 @@ import type {
   TicketStatus,
   User,
 } from "@/lib/types";
+import { tr } from "@/lib/i18n";
 
 export interface PublishSingleInput {
   title: string;
@@ -77,7 +78,7 @@ function toFormData(fields: Record<string, unknown>): FormData {
 function bg(promise: Promise<unknown>) {
   promise.catch((error) => {
     console.error("[nava sync]", error);
-    toast.error("همگام‌سازی با سرور ناموفق بود");
+    toast.error(tr("همگام‌سازی با سرور ناموفق بود"));
   });
 }
 
@@ -300,7 +301,7 @@ export const useDb = create<DbState>()((set, get) => ({
       return song;
     } catch (error) {
       console.error("[nava publishSingle]", error);
-      toast.error("انتشار تک‌آهنگ ناموفق بود");
+      toast.error(tr("انتشار تک‌آهنگ ناموفق بود"));
       return null;
     }
   },
@@ -333,7 +334,7 @@ export const useDb = create<DbState>()((set, get) => ({
       return album;
     } catch (error) {
       console.error("[nava publishAlbum]", error);
-      toast.error("انتشار آلبوم ناموفق بود");
+      toast.error(tr("انتشار آلبوم ناموفق بود"));
       return null;
     }
   },

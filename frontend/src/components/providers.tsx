@@ -32,9 +32,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
       enableSystem
       disableTransitionOnChange
     >
-      <TooltipProvider delay={250}>{children}</TooltipProvider>
+      <TooltipProvider delay={250}>
+        <LanguageSync>{children}</LanguageSync>
+      </TooltipProvider>
       <Toaster position="top-center" />
-      <LanguageSync />
       <ServiceWorkerRegister />
     </ThemeProvider>
   );

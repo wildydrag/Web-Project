@@ -4,6 +4,7 @@ import { Slider } from "@/components/ui/slider";
 import { formatDuration } from "@/lib/format";
 import { usePlayer } from "@/lib/stores/player-store";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 /**
  * Seekable progress bar. Forced `dir="ltr"` so the timeline reads left→right
@@ -18,6 +19,7 @@ export function ProgressBar({
   showTimes?: boolean;
   className?: string;
 }) {
+  const t = useT();
   const position = usePlayer((s) => s.positionSec);
   const seek = usePlayer((s) => s.seek);
   const value = Math.min(position, duration);
@@ -36,7 +38,7 @@ export function ProgressBar({
         step={1}
         onValueChange={(v) => seek(Array.isArray(v) ? v[0] : v)}
         className="flex-1"
-        aria-label="نوار پیشرفت آهنگ"
+        aria-label={t("نوار پیشرفت آهنگ")}
       />
       {showTimes ? (
         <span className="tabular w-10 text-xs text-muted-foreground">

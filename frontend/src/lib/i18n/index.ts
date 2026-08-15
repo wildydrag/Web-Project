@@ -11,10 +11,10 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-import { DIRECTION, EN, type Language } from "./dictionary";
+import { DIRECTION, EN, LOCALE, type Language } from "./dictionary";
 
 export type { Language };
-export { DIRECTION };
+export { DIRECTION, LOCALE };
 
 interface LanguageState {
   language: Language;
@@ -31,10 +31,25 @@ export const useLanguageStore = create<LanguageState>()(
   ),
 );
 
-/** Translate a Persian source string, falling back to it when untranslated. */
-export function translate(text: string, language: Language): string {
-  if (language === "fa") return text;
-  return EN[text] ?? text;
+/** Values substituted into `{placeholder}` slots. */
+export type Vars = Record<string, string | number>;
+
+function interpolate(text: string, vars?: Vars): string {
+  if (!vars) return text;
+  return text.replace(/\{(\w+)\}/g, (whole, key) =>
+    key in vars ? String(vars[key]) : whole,
+  );
+}
+
+/**
+ * Translate a Persian source string, falling back to it when untranslated.
+ *
+ * Placeholders survive translation, so a sentence whose word order differs
+ * between the two languages still reads correctly:
+ * `translate("{n} آهنگ", "en", { n: 5 })` → `"5 tracks"`.
+ */
+export function translate(text: string, language: Language, vars?: Vars): string {
+  return interpolate(language === "fa" ? text : EN[text] ?? text, vars);
 }
 
 /**
@@ -45,13 +60,22 @@ export function translate(text: string, language: Language): string {
  * <h1>{t("ورود به نوا")}</h1>
  * ```
  */
-export function useT(): (text: string) => string {
+export function useT(): (text: string, vars?: Vars) => string {
   const language = useLanguageStore((s) => s.language);
-  return (text: string) => translate(text, language);
+  return (text: string, vars?: Vars) => translate(text, language, vars);
+}
+
+/**
+ * Translate outside a component — for toasts fired from stores and helpers,
+ * where there is no render to hang a hook off. Reads the store imperatively so
+ * it always reflects the language in force at the moment it is called.
+ */
+export function tr(text: string, vars?: Vars): string {
+  return translate(text, useLanguageStore.getState().language, vars);
 }
 
 /** The active language (and its writing direction). */
-export function useLanguage(): { language: Language; dir: "rtl" | "ltr" } {
+export function useLanguage(): { language: Language; dir: "rtl" | "ltr"; locale: string } {
   const language = useLanguageStore((s) => s.language);
-  return { language, dir: DIRECTION[language] };
+  return { language, dir: DIRECTION[language], locale: LOCALE[language] };
 }

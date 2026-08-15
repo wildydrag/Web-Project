@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +16,7 @@ import {
  * it can sit inline inside the sign-up consent label (per the brief).
  */
 export function PrivacyPolicyDialog() {
+  const t = useT();
   return (
     <Dialog>
       <DialogTrigger
@@ -25,27 +27,24 @@ export function PrivacyPolicyDialog() {
           />
         }
       >
-        سیاست حریم خصوصی
+        {t("سیاست حریم خصوصی")}
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>سیاست حریم خصوصی</DialogTitle>
+          <DialogTitle>{t("سیاست حریم خصوصی")}</DialogTitle>
           <DialogDescription>
-            خلاصه‌ای از نحوه‌ی نگه‌داری و استفاده‌ی نوا از اطلاعات شما.
+            {t("خلاصه‌ای از نحوه‌ی نگه‌داری و استفاده‌ی نوا از اطلاعات شما.")}
           </DialogDescription>
         </DialogHeader>
         <div className="scrollbar-slim max-h-72 space-y-3 overflow-y-auto text-sm leading-relaxed text-muted-foreground">
           <p>
-            نوا اطلاعات حساب شما (نام نمایشی، ایمیل و ترجیحات) را تنها برای ارائه‌ی
-            سرویس استریم موسیقی نگه می‌دارد و آن‌ها را در اختیار اشخاص ثالث قرار نمی‌دهد.
+            {t("نوا اطلاعات حساب شما (نام نمایشی، ایمیل و ترجیحات) را تنها برای ارائه‌ی سرویس استریم موسیقی نگه می‌دارد و آن‌ها را در اختیار اشخاص ثالث قرار نمی‌دهد.")}
           </p>
           <p>
-            تاریخچه‌ی پخش و علاقه‌مندی‌های شما برای بهبود پیشنهادها استفاده می‌شود.
-            در هر زمان می‌توانید از بخش «تنظیمات» حساب خود را حذف کنید.
+            {t("تاریخچه‌ی پخش و علاقه‌مندی‌های شما برای بهبود پیشنهادها استفاده می‌شود. در هر زمان می‌توانید از بخش «تنظیمات» حساب خود را حذف کنید.")}
           </p>
           <p>
-            با ثبت‌نام، می‌پذیرید که داده‌های لازم برای عملکرد سرویس (مانند پلی‌لیست‌ها
-            و آمار شنیدن) ذخیره شوند. این متن صرفاً نمونه است و در فاز بعد تکمیل می‌شود.
+            {t("با ثبت‌نام، می‌پذیرید که داده‌های لازم برای عملکرد سرویس (مانند پلی‌لیست‌ها و آمار شنیدن) ذخیره شوند. این متن صرفاً نمونه است و در فاز بعد تکمیل می‌شود.")}
           </p>
         </div>
         <DialogFooter showCloseButton />

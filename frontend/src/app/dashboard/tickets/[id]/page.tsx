@@ -15,8 +15,10 @@ import { TICKET_STATUS } from "@/lib/status-labels";
 import { useDb } from "@/lib/stores/db-store";
 import { useCurrentUser } from "@/lib/stores/session-store";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 export default function TicketDetailPage() {
+  const t = useT();
   const { id } = useParams<{ id: string }>();
   const tickets = useDb((s) => s.tickets);
   const replyToTicket = useDb((s) => s.replyToTicket);
@@ -25,7 +27,7 @@ export default function TicketDetailPage() {
   const [reply, setReply] = useState("");
 
   const ticket = byId(tickets, id);
-  if (!ticket || !user) return <NotFoundBlock title="تیکت یافت نشد" backHref="/dashboard/tickets" />;
+  if (!ticket || !user) return <NotFoundBlock title={t("تیکت یافت نشد")} backHref="/dashboard/tickets" />;
 
   const status = TICKET_STATUS[ticket.status];
 
@@ -44,7 +46,7 @@ export default function TicketDetailPage() {
           href="/dashboard/tickets"
           className="text-sm text-muted-foreground hover:text-foreground hover:underline"
         >
-          بازگشت به تیکت‌ها
+          {t("بازگشت به تیکت‌ها")}
         </Link>
         <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -57,14 +59,14 @@ export default function TicketDetailPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <StatusPill label={status.label} tone={status.tone} />
+            <StatusPill label={t(status.label)} tone={status.tone} />
             {ticket.status !== "closed" ? (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setTicketStatus(ticket.id, "closed")}
               >
-                بستن تیکت
+                {t("بستن تیکت")}
               </Button>
             ) : (
               <Button
@@ -72,7 +74,7 @@ export default function TicketDetailPage() {
                 size="sm"
                 onClick={() => setTicketStatus(ticket.id, "open")}
               >
-                بازگشایی
+                {t("بازگشایی")}
               </Button>
             )}
           </div>
@@ -110,16 +112,16 @@ export default function TicketDetailPage() {
           <Textarea
             value={reply}
             onChange={(event) => setReply(event.target.value)}
-            placeholder="پاسخ خود را بنویسید…"
+            placeholder={t("پاسخ خود را بنویسید…")}
             rows={2}
             className="flex-1 resize-none"
           />
-          <Button type="submit" size="icon-lg" aria-label="ارسال پاسخ">
+          <Button type="submit" size="icon-lg" aria-label={t("ارسال پاسخ")}>
             <Send />
           </Button>
         </form>
       ) : (
-        <p className="text-center text-sm text-muted-foreground">این تیکت بسته شده است.</p>
+        <p className="text-center text-sm text-muted-foreground">{t("این تیکت بسته شده است.")}</p>
       )}
     </div>
   );

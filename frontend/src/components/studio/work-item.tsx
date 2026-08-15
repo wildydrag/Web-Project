@@ -42,6 +42,7 @@ import { GENRES } from "@/lib/config";
 import { formatCompact, formatToman } from "@/lib/format";
 import { useDb } from "@/lib/stores/db-store";
 import type { Album, Song } from "@/lib/types";
+import { useT } from "@/lib/i18n";
 
 // Earnings are calculated by the backend with the same rates that drive the
 // admin payout table, so the studio only displays the figure it is given.
@@ -52,6 +53,7 @@ type Work =
 
 /** A published work row in the artist studio: cover, stats, edit & delete. */
 export function WorkItem({ work }: { work: Work }) {
+  const t = useT();
   const updateAlbum = useDb((s) => s.updateAlbum);
   const updateSong = useDb((s) => s.updateSong);
   const deleteAlbum = useDb((s) => s.deleteAlbum);
@@ -67,7 +69,7 @@ export function WorkItem({ work }: { work: Work }) {
           listeners: work.album.listenerCount,
           streams: work.album.streamCount,
           revenue: work.album.revenueToman ?? 0,
-          typeLabel: "آلبوم",
+          typeLabel: t("آلبوم"),
         }
       : {
           id: work.song.id,
@@ -77,7 +79,7 @@ export function WorkItem({ work }: { work: Work }) {
           listeners: work.song.listenerCount,
           streams: work.song.streamCount,
           revenue: work.song.revenueToman ?? 0,
-          typeLabel: "تک‌آهنگ",
+          typeLabel: t("تک‌آهنگ"),
         };
 
   const [editOpen, setEditOpen] = useState(false);
@@ -91,14 +93,14 @@ export function WorkItem({ work }: { work: Work }) {
     if (work.kind === "album") updateAlbum(work.album.id, patch);
     else updateSong(work.song.id, patch);
     setEditOpen(false);
-    toast.success("اثر به‌روزرسانی شد");
+    toast.success(t("اثر به‌روزرسانی شد"));
   }
 
   function confirmDelete() {
     if (work.kind === "album") deleteAlbum(work.album.id);
     else deleteSong(work.song.id);
     setDeleteOpen(false);
-    toast.success("اثر حذف شد");
+    toast.success(t("اثر حذف شد"));
   }
 
   return (
@@ -112,37 +114,37 @@ export function WorkItem({ work }: { work: Work }) {
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium">{data.title}</p>
         <p className="text-xs text-muted-foreground">
-          {data.typeLabel} · {data.genre}
+          {data.typeLabel} · {t(data.genre)}
         </p>
       </div>
 
       <div className="hidden items-center gap-5 text-sm text-muted-foreground sm:flex">
-        <span className="flex items-center gap-1" title="شنوندگان">
+        <span className="flex items-center gap-1" title={t("شنوندگان")}>
           <Headphones className="size-4" />
           {formatCompact(data.listeners)}
         </span>
-        <span className="flex items-center gap-1" title="استریم‌ها">
+        <span className="flex items-center gap-1" title={t("استریم‌ها")}>
           <Radio className="size-4" />
           {formatCompact(data.streams)}
         </span>
-        <span className="flex items-center gap-1" title="درآمد تخمینی">
+        <span className="flex items-center gap-1" title={t("درآمد تخمینی")}>
           <Wallet className="size-4" />
           {formatToman(data.revenue)}
         </span>
       </div>
 
       <DropdownMenu>
-        <DropdownMenuTrigger render={<Button variant="ghost" size="icon" aria-label="گزینه‌ها" />}>
+        <DropdownMenuTrigger render={<Button variant="ghost" size="icon" aria-label={t("گزینه‌ها")} />}>
           <MoreHorizontal />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={() => setEditOpen(true)}>
             <Pencil />
-            ویرایش
+            {t("ویرایش")}
           </DropdownMenuItem>
           <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
             <Trash2 />
-            حذف
+            {t("حذف")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -150,11 +152,11 @@ export function WorkItem({ work }: { work: Work }) {
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>ویرایش اثر</DialogTitle>
+            <DialogTitle>{t("ویرایش اثر")}</DialogTitle>
           </DialogHeader>
           <form id={`edit-${data.id}`} onSubmit={saveEdit} className="space-y-3">
             <div className="space-y-1.5">
-              <Label htmlFor={`title-${data.id}`}>عنوان</Label>
+              <Label htmlFor={`title-${data.id}`}>{t("عنوان")}</Label>
               <Input
                 id={`title-${data.id}`}
                 value={title}
@@ -163,7 +165,7 @@ export function WorkItem({ work }: { work: Work }) {
               />
             </div>
             <div className="space-y-1.5">
-              <Label>ژانر</Label>
+              <Label>{t("ژانر")}</Label>
               <Select value={genre} onValueChange={(v) => v && setGenre(v)}>
                 <SelectTrigger className="h-10 w-full">
                   <SelectValue />
@@ -171,7 +173,7 @@ export function WorkItem({ work }: { work: Work }) {
                 <SelectContent>
                   {GENRES.map((g) => (
                     <SelectItem key={g} value={g}>
-                      {g}
+                      {t(g)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -180,7 +182,7 @@ export function WorkItem({ work }: { work: Work }) {
           </form>
           <DialogFooter>
             <Button type="submit" form={`edit-${data.id}`}>
-              ذخیره
+              {t("ذخیره")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -189,13 +191,13 @@ export function WorkItem({ work }: { work: Work }) {
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>حذف «{data.title}»؟</AlertDialogTitle>
-            <AlertDialogDescription>این عمل قابل بازگشت نیست.</AlertDialogDescription>
+            <AlertDialogTitle>{t("حذف «{name}»؟", { name: data.title })}</AlertDialogTitle>
+            <AlertDialogDescription>{t("این عمل قابل بازگشت نیست.")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>انصراف</AlertDialogCancel>
+            <AlertDialogCancel>{t("انصراف")}</AlertDialogCancel>
             <AlertDialogAction variant="destructive" onClick={confirmDelete}>
-              حذف
+              {t("حذف")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

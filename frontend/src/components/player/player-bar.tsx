@@ -12,10 +12,11 @@ import { ProgressBar } from "@/components/player/progress-bar";
 import { QueueSheet } from "@/components/player/queue-sheet";
 import { VolumeControl } from "@/components/player/volume-control";
 import { Button } from "@/components/ui/button";
-import { formatCompact } from "@/lib/format";
+import { formatCompact, listSeparator } from "@/lib/format";
 import { useNowPlaying } from "@/lib/hooks/use-now-playing";
 import { usePlayer } from "@/lib/stores/player-store";
 import { useCurrentUser } from "@/lib/stores/session-store";
+import { useT } from "@/lib/i18n";
 
 /** Per-song listener/stream counts, shown only to gold members (per the brief). */
 function GoldStats({ listeners, streams }: { listeners: number; streams: number }) {
@@ -40,6 +41,7 @@ function GoldStats({ listeners, streams }: { listeners: number; streams: number 
  * content (no fixed positioning needed).
  */
 export function PlayerBar() {
+  const t = useT();
   const nowPlaying = useNowPlaying();
   const user = useCurrentUser();
   const isPlaying = usePlayer((s) => s.isPlaying);
@@ -109,7 +111,7 @@ export function PlayerBar() {
         <button
           onClick={() => setExpanded(true)}
           className="flex min-w-0 flex-1 items-center gap-3 text-start"
-          aria-label="باز کردن پخش‌کننده تمام‌صفحه"
+          aria-label={t("باز کردن پخش‌کننده تمام‌صفحه")}
         >
           <CoverArt
             seed={song.coverSeed}
@@ -120,7 +122,7 @@ export function PlayerBar() {
           <span className="min-w-0">
             <span className="block truncate text-sm font-medium">{song.title}</span>
             <span className="block truncate text-xs text-muted-foreground">
-              {artists.map((a) => a.name).join("، ")}
+              {artists.map((a) => a.name).join(listSeparator())}
             </span>
           </span>
         </button>
@@ -128,11 +130,11 @@ export function PlayerBar() {
           variant="ghost"
           size="icon"
           onClick={togglePlay}
-          aria-label={isPlaying ? "توقف" : "پخش"}
+          aria-label={isPlaying ? t("توقف") : t("پخش")}
         >
           {isPlaying ? <Pause className="fill-current" /> : <Play className="fill-current" />}
         </Button>
-        <Button variant="ghost" size="icon" onClick={next} aria-label="آهنگ بعدی">
+        <Button variant="ghost" size="icon" onClick={next} aria-label={t("آهنگ بعدی")}>
           <SkipForward className="fill-current" />
         </Button>
       </div>

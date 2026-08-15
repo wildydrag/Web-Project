@@ -16,6 +16,17 @@ def _isolated_media(settings, tmp_path):
     settings.MEDIA_ROOT = tmp_path / "media"
 
 
+@pytest.fixture(autouse=True)
+def _offline_gateway(settings):
+    """Force the fake gateway for every test.
+
+    The application defaults to ZarinPal's sandbox; the suite must not depend on
+    that (or on any network) to pass. Tests that exercise the ZarinPal adapter
+    itself opt back in and stub the HTTP call.
+    """
+    settings.PAYMENT_GATEWAY = "fake"
+
+
 @pytest.fixture
 def api():
     return APIClient()

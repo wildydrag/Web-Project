@@ -26,6 +26,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { GENRES } from "@/lib/config";
 import { useDb } from "@/lib/stores/db-store";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
+import { toFaDigits } from "@/lib/format";
 
 type ReleaseKind = "single" | "album";
 interface TrackDraft {
@@ -40,6 +42,7 @@ const todayIso = () => new Date().toISOString().slice(0, 10);
  * brief (MP3/WAV/FLAC), but in the Phase 1 mock only the metadata is persisted.
  */
 export function PublishWorkDialog({ artistId }: { artistId: string }) {
+  const t = useT();
   const artists = useDb((s) => s.artists);
   const publishSingle = useDb((s) => s.publishSingle);
   const publishAlbum = useDb((s) => s.publishAlbum);
@@ -81,7 +84,7 @@ export function PublishWorkDialog({ artistId }: { artistId: string }) {
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (!title.trim()) {
-      toast.error("عنوان اثر را وارد کنید");
+      toast.error(t("عنوان اثر را وارد کنید"));
       return;
     }
     const isoDate = `${releaseDate}T00:00:00.000Z`;
@@ -103,7 +106,7 @@ export function PublishWorkDialog({ artistId }: { artistId: string }) {
       } else {
         const validTracks = tracks.filter((t) => t.title.trim());
         if (validTracks.length === 0) {
-          toast.error("حداقل یک ترک با عنوان وارد کنید");
+          toast.error(t("حداقل یک ترک با عنوان وارد کنید"));
           return;
         }
         created = await publishAlbum(artistId, {
@@ -116,7 +119,7 @@ export function PublishWorkDialog({ artistId }: { artistId: string }) {
         });
       }
       if (!created) return; // the store already surfaced the error
-      toast.success("اثر منتشر شد");
+      toast.success(t("اثر منتشر شد"));
       reset();
       setOpen(false);
     } finally {
@@ -134,27 +137,27 @@ export function PublishWorkDialog({ artistId }: { artistId: string }) {
     >
       <Button onClick={() => setOpen(true)}>
         <Plus />
-        انتشار اثر
+        {t("انتشار اثر")}
       </Button>
       <DialogContent className="max-h-[88vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>انتشار اثر جدید</DialogTitle>
+          <DialogTitle>{t("انتشار اثر جدید")}</DialogTitle>
         </DialogHeader>
 
         <form id="publish-form" onSubmit={submit} className="space-y-4">
           <Tabs value={kind} onValueChange={(v) => setKind(v as ReleaseKind)}>
             <TabsList className="w-full">
               <TabsTrigger value="single" className="flex-1">
-                تک‌آهنگ
+                {t("تک‌آهنگ")}
               </TabsTrigger>
               <TabsTrigger value="album" className="flex-1">
-                آلبوم
+                {t("آلبوم")}
               </TabsTrigger>
             </TabsList>
 
             <div className="space-y-4 pt-4">
               <div className="space-y-1.5">
-                <Label htmlFor="work-title">عنوان</Label>
+                <Label htmlFor="work-title">{t("عنوان")}</Label>
                 <Input
                   id="work-title"
                   value={title}
@@ -165,7 +168,7 @@ export function PublishWorkDialog({ artistId }: { artistId: string }) {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label>ژانر</Label>
+                  <Label>{t("ژانر")}</Label>
                   <Select value={genre} onValueChange={(v) => v && setGenre(v)}>
                     <SelectTrigger className="h-10 w-full">
                       <SelectValue />
@@ -173,14 +176,14 @@ export function PublishWorkDialog({ artistId }: { artistId: string }) {
                     <SelectContent>
                       {GENRES.map((g) => (
                         <SelectItem key={g} value={g}>
-                          {g}
+                          {t(g)}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="release-date">تاریخ انتشار</Label>
+                  <Label htmlFor="release-date">{t("تاریخ انتشار")}</Label>
                   <Input
                     id="release-date"
                     type="date"
@@ -196,14 +199,14 @@ export function PublishWorkDialog({ artistId }: { artistId: string }) {
               <div className="grid grid-cols-2 gap-3">
                 <FilePicker
                   icon={FileAudio}
-                  label="فایل صوتی"
+                  label={t("فایل صوتی")}
                   accept="audio/*,.mp3,.wav,.flac"
                   file={audioFile}
                   onPick={setAudioFile}
                 />
                 <FilePicker
                   icon={ImageIcon}
-                  label="کاور"
+                  label={t("کاور")}
                   accept="image/*"
                   file={coverFile}
                   onPick={setCoverFile}
@@ -212,7 +215,7 @@ export function PublishWorkDialog({ artistId }: { artistId: string }) {
 
               <TabsContent value="single" className="space-y-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="duration">مدت (ثانیه)</Label>
+                  <Label htmlFor="duration">{t("مدت (ثانیه)")}</Label>
                   <Input
                     id="duration"
                     type="number"
@@ -224,7 +227,7 @@ export function PublishWorkDialog({ artistId }: { artistId: string }) {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="lyrics">متن آهنگ (اختیاری)</Label>
+                  <Label htmlFor="lyrics">{t("متن آهنگ (اختیاری)")}</Label>
                   <Textarea
                     id="lyrics"
                     value={lyrics}
@@ -235,7 +238,7 @@ export function PublishWorkDialog({ artistId }: { artistId: string }) {
               </TabsContent>
 
               <TabsContent value="album" className="space-y-3">
-                <Label>ترک‌ها</Label>
+                <Label>{t("ترک‌ها")}</Label>
                 {tracks.map((track, i) => (
                   <div key={i} className="flex items-center gap-2">
                     <Input
@@ -247,7 +250,7 @@ export function PublishWorkDialog({ artistId }: { artistId: string }) {
                           ),
                         )
                       }
-                      placeholder={`عنوان ترک ${i + 1}`}
+                      placeholder={t("عنوان ترک {n}", { n: toFaDigits(i + 1) })}
                       className="h-10 flex-1"
                     />
                     <Input
@@ -265,7 +268,7 @@ export function PublishWorkDialog({ artistId }: { artistId: string }) {
                         )
                       }
                       className="h-10 w-20"
-                      aria-label="مدت ترک (ثانیه)"
+                      aria-label={t("مدت ترک (ثانیه)")}
                     />
                     <Button
                       type="button"
@@ -273,7 +276,7 @@ export function PublishWorkDialog({ artistId }: { artistId: string }) {
                       size="icon"
                       onClick={() => setTracks((prev) => prev.filter((_, j) => j !== i))}
                       disabled={tracks.length <= 1}
-                      aria-label="حذف ترک"
+                      aria-label={t("حذف ترک")}
                     >
                       <X />
                     </Button>
@@ -288,13 +291,13 @@ export function PublishWorkDialog({ artistId }: { artistId: string }) {
                   }
                 >
                   <Plus />
-                  افزودن ترک
+                  {t("افزودن ترک")}
                 </Button>
               </TabsContent>
 
               {otherArtists.length > 0 ? (
                 <div className="space-y-1.5">
-                  <Label>هنرمندان همکار (اختیاری)</Label>
+                  <Label>{t("هنرمندان همکار (اختیاری)")}</Label>
                   <div className="flex flex-wrap gap-1.5">
                     {otherArtists.map((artist) => {
                       const on = collaborators.includes(artist.id);
@@ -323,7 +326,7 @@ export function PublishWorkDialog({ artistId }: { artistId: string }) {
 
         <DialogFooter>
           <Button type="submit" form="publish-form">
-            انتشار
+            {t("انتشار")}
           </Button>
         </DialogFooter>
       </DialogContent>

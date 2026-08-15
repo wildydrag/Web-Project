@@ -21,10 +21,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { byId } from "@/lib/data/selectors";
 import { formatDate } from "@/lib/format";
 import { useDb } from "@/lib/stores/db-store";
+import { useT } from "@/lib/i18n";
 
 const isUrl = (value: string) => /^https?:\/\//i.test(value);
 
 export default function ApprovalDetailPage() {
+  const t = useT();
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const artists = useDb((s) => s.artists);
@@ -36,7 +38,7 @@ export default function ApprovalDetailPage() {
   const [reason, setReason] = useState("");
 
   const artist = byId(artists, id);
-  if (!artist) return <NotFoundBlock title="درخواست یافت نشد" backHref="/dashboard/approvals" />;
+  if (!artist) return <NotFoundBlock title={t("درخواست یافت نشد")} backHref="/dashboard/approvals" />;
 
   const email = byId(users, artist.userId)?.email ?? "—";
   const portfolioItems = artist.portfolio
@@ -47,7 +49,7 @@ export default function ApprovalDetailPage() {
 
   function approve() {
     approveArtist(artist!.id);
-    toast.success(`${artist!.name} تایید شد`);
+    toast.success(t("{name} تایید شد", { name: artist!.name }));
     router.replace("/dashboard/approvals");
   }
 
@@ -56,7 +58,7 @@ export default function ApprovalDetailPage() {
     const trimmed = reason.trim();
     if (!trimmed) return;
     rejectArtist(artist!.id, trimmed);
-    toast.success("درخواست رد شد");
+    toast.success(t("درخواست رد شد"));
     router.replace("/dashboard/approvals");
   }
 
@@ -66,7 +68,7 @@ export default function ApprovalDetailPage() {
         href="/dashboard/approvals"
         className="text-sm text-muted-foreground hover:text-foreground hover:underline"
       >
-        بازگشت به درخواست‌ها
+        {t("بازگشت به درخواست‌ها")}
       </Link>
 
       <div className="flex items-center gap-4">
@@ -77,15 +79,15 @@ export default function ApprovalDetailPage() {
             {email}
           </p>
           <p className="text-xs text-muted-foreground">
-            تاریخ درخواست: {formatDate(artist.requestedAt)}
+            {t("تاریخ درخواست: {date}", { date: formatDate(artist.requestedAt) })}
           </p>
         </div>
       </div>
 
       <section className="rounded-xl border bg-card p-4">
-        <h2 className="mb-2 font-medium">نمونه‌کارها</h2>
+        <h2 className="mb-2 font-medium">{t("نمونه‌کارها")}</h2>
         {portfolioItems.length === 0 ? (
-          <p className="text-sm text-muted-foreground">موردی ثبت نشده است.</p>
+          <p className="text-sm text-muted-foreground">{t("موردی ثبت نشده است.")}</p>
         ) : (
           <ul className="space-y-1.5 text-sm">
             {portfolioItems.map((item, i) =>
@@ -114,17 +116,19 @@ export default function ApprovalDetailPage() {
 
       {processed ? (
         <div className="rounded-xl border bg-muted/40 p-4 text-sm text-muted-foreground">
-          این درخواست قبلاً {artist.status === "approved" ? "تایید" : "رد"} شده است.
+          {t("این درخواست قبلاً {status} شده است.", {
+              status: artist.status === "approved" ? t("تایید شده") : t("رد شده"),
+            })}
         </div>
       ) : (
         <div className="flex gap-2">
           <Button onClick={approve}>
             <Check />
-            تایید درخواست
+            {t("تایید درخواست")}
           </Button>
           <Button variant="destructive" onClick={() => setRejectOpen(true)}>
             <X />
-            رد درخواست
+            {t("رد درخواست")}
           </Button>
         </div>
       )}
@@ -132,21 +136,21 @@ export default function ApprovalDetailPage() {
       <Dialog open={rejectOpen} onOpenChange={setRejectOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>رد درخواست</DialogTitle>
+            <DialogTitle>{t("رد درخواست")}</DialogTitle>
           </DialogHeader>
           <form id="reject-form" onSubmit={reject} className="space-y-1.5">
-            <Label htmlFor="reason">دلیل رد</Label>
+            <Label htmlFor="reason">{t("دلیل رد")}</Label>
             <Textarea
               id="reason"
               value={reason}
               onChange={(event) => setReason(event.target.value)}
               rows={3}
-              placeholder="دلیل رد به هنرمند اطلاع داده می‌شود."
+              placeholder={t("دلیل رد به هنرمند اطلاع داده می‌شود.")}
             />
           </form>
           <DialogFooter>
             <Button type="submit" form="reject-form" variant="destructive">
-              ثبت و رد درخواست
+              {t("ثبت و رد درخواست")}
             </Button>
           </DialogFooter>
         </DialogContent>

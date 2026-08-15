@@ -30,7 +30,10 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 class PaymentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Payment
-        fields = ["id", "tier", "billing_period", "amount", "gateway", "status", "created_at"]
+        fields = [
+            "id", "tier", "billing_period", "amount", "gateway",
+            "authority", "ref_id", "status", "created_at",
+        ]
 
 
 class PlatformSettingsSerializer(serializers.ModelSerializer):

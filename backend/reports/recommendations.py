@@ -21,7 +21,7 @@ Cold start: a user with no listening history gets the most popular visible
 songs, labelled as such.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import timedelta
 
 from django.db.models import Count
@@ -46,7 +46,12 @@ WEIGHT_POPULARITY = 1.0
 class Recommendation:
     song: Song
     score: float
+    #: The explanation, as a template with `{placeholder}` slots rather than a
+    #: finished sentence — the artist and genre names are filled in by whoever
+    #: renders it. That lets the frontend show the reason in either language
+    #: from a single source, instead of the API guessing which one to send.
     reason: str
+    reason_args: dict = field(default_factory=dict)
 
 
 def recommend_for(user, limit: int = 8) -> list[Recommendation]:
@@ -88,11 +93,13 @@ def recommend_for(user, limit: int = 8) -> list[Recommendation]:
         )
         if score <= 0:
             continue
+        reason, reason_args = _reason(song, genre_share, is_followed, familiar_plays)
         scored.append(
             Recommendation(
                 song=song,
                 score=round(score, 4),
-                reason=_reason(song, genre_share, is_followed, familiar_plays),
+                reason=reason,
+                reason_args=reason_args,
             )
         )
 
@@ -108,24 +115,27 @@ def _counts(queryset, field: str) -> dict:
     return {row[field]: row["n"] for row in rows if row[field] is not None}
 
 
+POPULAR_REASON = "از محبوب‌ترین‌های نوا"
+
+
 def _popular_fallback(candidates, limit: int) -> list[Recommendation]:
     top = candidates.order_by("-stream_count")[:limit]
     return [
-        Recommendation(song=song, score=0.0, reason="از محبوب‌ترین‌های نوا")
+        Recommendation(song=song, score=0.0, reason=POPULAR_REASON)
         for song in top
     ]
 
 
-def _reason(song, genre_share: float, is_followed: bool, familiar_plays: int) -> str:
-    """The single most relevant explanation, in the user's language."""
+def _reason(song, genre_share: float, is_followed: bool, familiar_plays: int):
+    """The single most relevant explanation, as a (template, args) pair."""
     artist = _primary_artist_name(song)
     if is_followed:
-        return f"چون {artist} را دنبال می‌کنید"
+        return "چون {artist} را دنبال می‌کنید", {"artist": artist}
     if familiar_plays:
-        return f"چون قبلاً به {artist} گوش داده‌اید"
+        return "چون قبلاً به {artist} گوش داده‌اید", {"artist": artist}
     if genre_share > 0:
-        return f"چون به سبک {_genre_label(song.genre)} علاقه دارید"
-    return "از محبوب‌ترین‌های نوا"
+        return "چون به سبک {genre} علاقه دارید", {"genre": _genre_label(song.genre)}
+    return POPULAR_REASON, {}
 
 
 def _primary_artist_name(song) -> str:

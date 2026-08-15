@@ -17,6 +17,7 @@ import { TIERS } from "@/lib/config";
 import { useDb } from "@/lib/stores/db-store";
 import { usePlayer } from "@/lib/stores/player-store";
 import { useCurrentUser } from "@/lib/stores/session-store";
+import { tr } from "@/lib/i18n";
 
 export function usePlayback() {
   const user = useCurrentUser();
@@ -33,8 +34,8 @@ export function usePlayback() {
   /** Returns false (and warns) when the daily cap has been reached. */
   function guardCap(): boolean {
     if (canStartStream) return true;
-    toast.error("به سقف استریم روزانه رسیدید", {
-      description: "برای استریم نامحدود، اشتراک خود را ارتقا دهید.",
+    toast.error(tr("به سقف استریم روزانه رسیدید"), {
+      description: tr("برای استریم نامحدود، اشتراک خود را ارتقا دهید."),
     });
     return false;
   }

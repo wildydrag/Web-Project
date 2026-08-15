@@ -17,12 +17,14 @@ import { navItemsForRole } from "@/lib/navigation";
 import { unreadNotificationCount } from "@/lib/data/selectors";
 import { useDb } from "@/lib/stores/db-store";
 import { useCurrentUser } from "@/lib/stores/session-store";
+import { useT } from "@/lib/i18n";
 
 /**
  * The contents of the sidebar — reused by the fixed desktop rail and the mobile
  * drawer (so navigation stays identical across breakpoints).
  */
 export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+  const t = useT();
   const user = useCurrentUser();
   const notifications = useDb((s) => s.notifications);
   if (!user) return null;
@@ -45,17 +47,17 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <div className="mt-auto rounded-xl border border-gold/25 bg-gold/10 p-4">
           <div className="mb-1 flex items-center gap-2 text-gold">
             <Crown className="size-4" />
-            <span className="text-sm font-medium">ارتقا به طلایی</span>
+            <span className="text-sm font-medium">{t("ارتقا به طلایی")}</span>
           </div>
           <p className="mb-3 text-xs text-muted-foreground">
-            استریم نامحدود، دانلود و دسترسی زودهنگام به آثار جدید.
+            {t("استریم نامحدود، دانلود و دسترسی زودهنگام به آثار جدید.")}
           </p>
           <Button
             size="sm"
             className="w-full"
             render={<Link href="/settings" onClick={onNavigate} />}
           >
-            مشاهده اشتراک‌ها
+            {t("مشاهده اشتراک‌ها")}
           </Button>
         </div>
       ) : null}
@@ -74,6 +76,7 @@ export function AppSidebar() {
 
 /** Hamburger button + slide-over drawer holding the same nav, for mobile. */
 export function MobileSidebar() {
+  const t = useT();
   const [open, setOpen] = useState(false);
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -81,10 +84,10 @@ export function MobileSidebar() {
         render={<Button variant="ghost" size="icon" className="md:hidden" />}
       >
         <Menu />
-        <span className="sr-only">باز کردن منو</span>
+        <span className="sr-only">{t("باز کردن منو")}</span>
       </SheetTrigger>
       <SheetContent side="right" className="w-72 bg-sidebar p-0">
-        <SheetTitle className="sr-only">منوی ناوبری</SheetTitle>
+        <SheetTitle className="sr-only">{t("منوی ناوبری")}</SheetTitle>
         <SidebarContent onNavigate={() => setOpen(false)} />
       </SheetContent>
     </Sheet>

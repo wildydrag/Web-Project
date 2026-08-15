@@ -29,7 +29,7 @@ export default function LoginPage() {
     setBusy(true);
     try {
       const user = await login(targetEmail, targetPassword);
-      toast.success(`خوش آمدید، ${user.displayName}`);
+      toast.success(t("خوش آمدید، {name}", { name: user.displayName }));
       router.replace(homeRouteForRole(user.role));
     } catch (error) {
       const { title, description } = loginErrorMessage(error);
@@ -97,7 +97,7 @@ export default function LoginPage() {
       </form>
 
       <p className="mt-4 text-center text-sm text-muted-foreground">
-        حساب ندارید؟{" "}
+        {t("حساب ندارید؟")}{" "}
         <Link href="/register" className="font-medium text-primary hover:underline">
           {t("ثبت‌نام")}
         </Link>
@@ -116,16 +116,16 @@ export default function LoginPage() {
             <li key={account.email} className="flex items-center gap-3 p-2">
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-medium">
-                  {account.label}
+                  {t(account.label)}
                   <span className="ms-1.5 font-normal text-muted-foreground">
-                    · {account.hint}
+                    · {t(account.hint)}
                   </span>
                 </p>
                 <p className="truncate font-mono text-[10px] text-muted-foreground" dir="ltr">
                   {account.email}
                 </p>
                 <p className="mt-0.5 truncate text-[10px] text-muted-foreground">
-                  {account.shows}
+                  {t(account.shows)}
                 </p>
               </div>
               <Button

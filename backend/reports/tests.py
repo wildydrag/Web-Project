@@ -129,7 +129,8 @@ def test_recommendations_prefer_the_genre_the_user_listens_to(api, auth, listene
     assert listened.title not in titles  # never re-recommend what was played
     assert titles[0] == rock_candidate.title  # genre affinity beats raw popularity
     assert jazz_candidate.title in titles
-    assert "راک" in body[0]["reason"]  # explains itself by genre
+    assert body[0]["reason"] == "چون به سبک {genre} علاقه دارید"
+    assert body[0]["reasonArgs"] == {"genre": "راک"}  # explains itself by genre
 
 
 def test_recommendations_cold_start_returns_popular(api, auth, listener, approved_artist):

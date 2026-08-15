@@ -10,9 +10,11 @@
 #
 #   BACKEND_PORT=8010 FRONTEND_PORT=3010 docker compose up --build
 #
-# The payment gateway defaults to the offline "fake" provider so the stack works
-# without internet access. Set PAYMENT_GATEWAY=zarinpal (plus a merchant id) to
-# use the real sandbox.
+# The payment gateway defaults to ZarinPal's sandbox, which needs no merchant
+# account. If the sandbox is unreachable, set PAYMENT_GATEWAY=fake to run the
+# identical checkout flow offline:
+#
+#   PAYMENT_GATEWAY=fake docker compose up
 
 services:
   db:
@@ -37,8 +39,10 @@ services:
       DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,backend
       DATABASE_URL: postgres://nava:nava@db:5432/nava
       CORS_ALLOWED_ORIGINS: http://localhost:${FRONTEND_PORT:-3000}
-      PAYMENT_GATEWAY: fake
-      PAYMENT_CALLBACK_URL: http://localhost:${FRONTEND_PORT:-3000}/settings?payment=callback
+      PAYMENT_GATEWAY: ${PAYMENT_GATEWAY:-zarinpal}
+      ZARINPAL_MERCHANT_ID: ${ZARINPAL_MERCHANT_ID:-b8f1e2c4-3a67-4d5b-9c81-2f4e6a0d7b39}
+      ZARINPAL_SANDBOX: "True"
+      PAYMENT_CALLBACK_URL: http://localhost:${FRONTEND_PORT:-3000}/payment/callback
       SEED_ON_START: "true"
     ports:
       - "${BACKEND_PORT:-8000}:8000"

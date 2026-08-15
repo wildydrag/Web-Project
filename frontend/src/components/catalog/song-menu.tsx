@@ -19,6 +19,7 @@ import { getUserPlaylists } from "@/lib/data/selectors";
 import { useDb } from "@/lib/stores/db-store";
 import { usePlayer } from "@/lib/stores/player-store";
 import { useCurrentUser } from "@/lib/stores/session-store";
+import { useT } from "@/lib/i18n";
 
 /**
  * The "…" menu shown on song cards/rows: queue actions and add/remove from any
@@ -31,6 +32,7 @@ export function SongMenu({
   songId: string;
   triggerClassName?: string;
 }) {
+  const t = useT();
   const user = useCurrentUser();
   const playlists = useDb((s) => s.playlists);
   const toggleSongInPlaylist = useDb((s) => s.toggleSongInPlaylist);
@@ -48,7 +50,7 @@ export function SongMenu({
             variant="ghost"
             size="icon-sm"
             className={triggerClassName}
-            aria-label="گزینه‌های بیشتر"
+            aria-label={t("گزینه‌های بیشتر")}
           />
         }
       >
@@ -58,31 +60,31 @@ export function SongMenu({
         <DropdownMenuItem
           onClick={() => {
             playNext(songId);
-            toast.success("به‌عنوان آهنگ بعدی اضافه شد");
+            toast.success(t("به‌عنوان آهنگ بعدی اضافه شد"));
           }}
         >
           <ListEnd />
-          پخش به‌عنوان بعدی
+          {t("پخش به‌عنوان بعدی")}
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => {
             addToQueue(songId);
-            toast.success("به صف پخش اضافه شد");
+            toast.success(t("به صف پخش اضافه شد"));
           }}
         >
           <ListPlus />
-          افزودن به صف
+          {t("افزودن به صف")}
         </DropdownMenuItem>
 
         <DropdownMenuSeparator />
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <Plus />
-            افزودن به پلی‌لیست
+            {t("افزودن به پلی‌لیست")}
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent className="max-h-64 overflow-y-auto">
             {myPlaylists.length === 0 ? (
-              <DropdownMenuItem disabled>هنوز پلی‌لیستی نساخته‌اید</DropdownMenuItem>
+              <DropdownMenuItem disabled>{t("هنوز پلی‌لیستی نساخته‌اید")}</DropdownMenuItem>
             ) : (
               myPlaylists.map((playlist) => (
                 <DropdownMenuCheckboxItem

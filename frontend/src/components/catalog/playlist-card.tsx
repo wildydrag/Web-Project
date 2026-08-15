@@ -7,9 +7,11 @@ import { CoverArt } from "@/components/cover-art";
 import { toFaDigits } from "@/lib/format";
 import { usePlayback } from "@/lib/hooks/use-playback";
 import type { Playlist } from "@/lib/types";
+import { useT } from "@/lib/i18n";
 
 /** Grid card for a playlist; links to its detail page, button plays it. */
 export function PlaylistCard({ playlist }: { playlist: Playlist }) {
+  const t = useT();
   const { playList } = usePlayback();
   const count = playlist.songIds.length;
 
@@ -32,7 +34,7 @@ export function PlaylistCard({ playlist }: { playlist: Playlist }) {
       >
         {playlist.name}
       </Link>
-      <p className="text-xs text-muted-foreground">{toFaDigits(count)} آهنگ</p>
+      <p className="text-xs text-muted-foreground">{t("{n} آهنگ", { n: toFaDigits(count) })}</p>
     </div>
   );
 }

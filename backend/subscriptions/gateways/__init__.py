@@ -2,7 +2,12 @@
 
 from django.conf import settings
 
-from .base import PaymentGateway, PaymentRequestResult, PaymentVerifyResult
+from .base import (
+    PaymentGateway,
+    PaymentGatewayError,
+    PaymentRequestResult,
+    PaymentVerifyResult,
+)
 from .fake import FakeGateway
 from .zarinpal import ZarinpalGateway
 
@@ -16,6 +21,7 @@ def get_gateway() -> PaymentGateway:
 __all__ = [
     "get_gateway",
     "PaymentGateway",
+    "PaymentGatewayError",
     "PaymentRequestResult",
     "PaymentVerifyResult",
 ]

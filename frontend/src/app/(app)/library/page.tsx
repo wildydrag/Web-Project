@@ -19,10 +19,12 @@ import {
 import { artistNames, getLibraryItems, isVisibleToUser } from "@/lib/data/selectors";
 import { useDb } from "@/lib/stores/db-store";
 import { useCurrentUser } from "@/lib/stores/session-store";
+import { useT } from "@/lib/i18n";
 
 type SortKey = "streams" | "date";
 
 function LibraryContent() {
+  const t = useT();
   const params = useSearchParams();
   const user = useCurrentUser();
   const albums = useDb((s) => s.albums);
@@ -58,9 +60,9 @@ function LibraryContent() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-heading text-2xl font-bold">آلبوم‌ها و تک‌آهنگ‌ها</h1>
+        <h1 className="font-heading text-2xl font-bold">{t("آلبوم‌ها و تک‌آهنگ‌ها")}</h1>
         <p className="text-sm text-muted-foreground">
-          آرشیو نوا را جستجو و کشف کنید.
+          {t("آرشیو نوا را جستجو و کشف کنید.")}
         </p>
       </div>
 
@@ -70,8 +72,8 @@ function LibraryContent() {
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="نام اثر یا هنرمند…"
-            aria-label="جستجو در آرشیو"
+            placeholder={t("نام اثر یا هنرمند…")}
+            aria-label={t("جستجو در آرشیو")}
             className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
         </div>
@@ -80,8 +82,8 @@ function LibraryContent() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="streams">پرشنونده‌ترین</SelectItem>
-            <SelectItem value="date">تازه‌ترین</SelectItem>
+            <SelectItem value="streams">{t("پرشنونده‌ترین")}</SelectItem>
+            <SelectItem value="date">{t("تازه‌ترین")}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -89,8 +91,8 @@ function LibraryContent() {
       {items.length === 0 ? (
         <EmptyState
           icon={Search}
-          title="نتیجه‌ای یافت نشد"
-          description="عبارت دیگری را جستجو کنید."
+          title={t("نتیجه‌ای یافت نشد")}
+          description={t("عبارت دیگری را جستجو کنید.")}
         />
       ) : (
         <MediaGrid>

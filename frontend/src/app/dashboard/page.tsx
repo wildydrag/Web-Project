@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { formatNumber, formatToman } from "@/lib/format";
 import { useApiResource } from "@/lib/api/hooks";
 import { useCurrentUser } from "@/lib/stores/session-store";
+import { useT } from "@/lib/i18n";
 
 /** Server-aggregated figures; admin-only fields are omitted for support staff. */
 interface DashboardOverview {
@@ -18,6 +19,7 @@ interface DashboardOverview {
 }
 
 export default function DashboardOverviewPage() {
+  const t = useT();
   const user = useCurrentUser();
   // All counts and sums are computed by the backend — the frontend only renders.
   const { data } = useApiResource<DashboardOverview>("/dashboard/overview/");
@@ -32,20 +34,20 @@ export default function DashboardOverviewPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-heading text-2xl font-bold">نمای کلی</h1>
+        <h1 className="font-heading text-2xl font-bold">{t("نمای کلی")}</h1>
         <p className="text-sm text-muted-foreground">
-          خوش آمدید، {user.displayName}.
+          {t("خوش آمدید، {name}.", { name: user.displayName })}
         </p>
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatTile label="تیکت‌های باز" value={formatNumber(openTickets)} icon={Ticket} />
-        <StatTile label="درخواست‌های در انتظار" value={formatNumber(pending)} icon={UserCheck} />
+        <StatTile label={t("تیکت‌های باز")} value={formatNumber(openTickets)} icon={Ticket} />
+        <StatTile label={t("درخواست‌های در انتظار")} value={formatNumber(pending)} icon={UserCheck} />
         {isAdmin ? (
           <>
-            <StatTile label="کل کاربران" value={formatNumber(totalUsers)} icon={Users} />
+            <StatTile label={t("کل کاربران")} value={formatNumber(totalUsers)} icon={Users} />
             <StatTile
-              label="درآمد ماهانه (تخمینی)"
+              label={t("درآمد ماهانه (تخمینی)")}
               value={formatToman(monthlyRevenue)}
               icon={Wallet}
             />
@@ -57,28 +59,28 @@ export default function DashboardOverviewPage() {
         <QuickLink
           href="/dashboard/tickets"
           icon={Ticket}
-          title="تیکت‌های پشتیبانی"
-          description="پاسخ به سوالات کاربران"
+          title={t("تیکت‌های پشتیبانی")}
+          description={t("پاسخ به سوالات کاربران")}
         />
         <QuickLink
           href="/dashboard/approvals"
           icon={UserCheck}
-          title="احراز هویت هنرمندان"
-          description="بررسی و تایید درخواست‌ها"
+          title={t("احراز هویت هنرمندان")}
+          description={t("بررسی و تایید درخواست‌ها")}
         />
         {isAdmin ? (
           <>
             <QuickLink
               href="/dashboard/auditing"
               icon={Wallet}
-              title="حسابرسی"
-              description="پاداش و تسویه هنرمندان"
+              title={t("حسابرسی")}
+              description={t("پاداش و تسویه هنرمندان")}
             />
             <QuickLink
               href="/dashboard/subscriptions"
               icon={CreditCard}
-              title="اشتراک‌ها و قیمت‌ها"
-              description="مدیریت قیمت و گزارش درآمد"
+              title={t("اشتراک‌ها و قیمت‌ها")}
+              description={t("مدیریت قیمت و گزارش درآمد")}
             />
           </>
         ) : null}
@@ -98,6 +100,7 @@ function QuickLink({
   title: string;
   description: string;
 }) {
+  const t = useT();
   return (
     <Link
       href={href}
@@ -111,7 +114,9 @@ function QuickLink({
         <p className="text-xs text-muted-foreground">{description}</p>
       </div>
       <Button variant="ghost" size="sm">
-        ورود
+        {/* Not t("ورود") — that string is the sign-in button, and translating
+            this card's action with it would read "Sign in". */}
+        {t("ورود به بخش")}
       </Button>
     </Link>
   );

@@ -9,6 +9,19 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
 
+class PaymentGatewayError(Exception):
+    """The gateway could not be reached, or refused the request.
+
+    Raised instead of letting a ``requests`` exception or a stray ``KeyError``
+    escape, so the API can answer with a clear 502 rather than a 500 traceback.
+    """
+
+    def __init__(self, message: str, *, code: int | None = None):
+        super().__init__(message)
+        self.message = message
+        self.code = code
+
+
 @dataclass
 class PaymentRequestResult:
     authority: str      # gateway-side token identifying this transaction
@@ -19,6 +32,8 @@ class PaymentRequestResult:
 class PaymentVerifyResult:
     success: bool
     ref_id: str = ""    # settlement reference on success
+    code: int | None = None
+    message: str = ""
 
 
 class PaymentGateway(ABC):

@@ -23,12 +23,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { api } from "@/lib/api/client";
+import { ApiError, api } from "@/lib/api/client";
 import { useApiResource } from "@/lib/api/hooks";
 import { TIERS } from "@/lib/config";
 import { formatNumber, formatToman } from "@/lib/format";
 import { useSession } from "@/lib/stores/session-store";
 import type { SubscriptionTier } from "@/lib/types";
+import { tr, useT } from "@/lib/i18n";
 
 interface Plans {
   prices: { silver: number; gold: number };
@@ -48,6 +49,7 @@ export function SubscriptionCheckoutDialog({
   tier: SubscriptionTier | null;
   onClose: () => void;
 }) {
+  const t = useT();
   const { data: plans } = useApiResource<Plans>("/subscriptions/plans/");
   const [period, setPeriod] = useState(1);
   const [busy, setBusy] = useState(false);
@@ -64,10 +66,16 @@ export function SubscriptionCheckoutDialog({
         "/subscriptions/checkout/",
         { tier: paidTier, billingPeriod: period },
       );
-      // Leave the app for the gateway; we return via the callback URL.
+      toast.info(t("در حال انتقال به درگاه…"));
+      // Leave the app for ZarinPal; we return via the callback URL.
       window.location.href = redirectUrl;
-    } catch {
-      toast.error("شروع پرداخت ناموفق بود");
+    } catch (error) {
+      // The API answers 502 with the gateway's own reason when ZarinPal is
+      // unreachable or refuses the request — worth showing rather than hiding.
+      toast.error(t("شروع پرداخت ناموفق بود"), {
+        description:
+          error instanceof ApiError ? error.firstMessage ?? undefined : undefined,
+      });
       setBusy(false);
     }
   }
@@ -77,10 +85,10 @@ export function SubscriptionCheckoutDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            خرید اشتراک {paidTier ? TIERS[paidTier].label : ""}
+            {t("خرید اشتراک {tier}", { tier: paidTier ? t(TIERS[paidTier].label) : "" })}
           </DialogTitle>
           <DialogDescription>
-            مدت اشتراک را انتخاب کنید و به درگاه پرداخت بروید.
+            {t("مدت اشتراک را انتخاب کنید و به درگاه پرداخت بروید.")}
           </DialogDescription>
         </DialogHeader>
 
@@ -94,7 +102,7 @@ export function SubscriptionCheckoutDialog({
                 period === months ? "border-primary bg-primary/5" : "hover:bg-accent/50"
               }`}
             >
-              <p className="font-medium">{formatNumber(months)} ماه</p>
+              <p className="font-medium">{t("{n} ماه", { n: formatNumber(months) })}</p>
               <p className="text-xs text-muted-foreground">
                 {formatToman(unitPrice * months)}
               </p>
@@ -103,9 +111,9 @@ export function SubscriptionCheckoutDialog({
         </div>
 
         <DialogFooter>
-          <DialogClose render={<Button variant="ghost">انصراف</Button>} />
+          <DialogClose render={<Button variant="ghost">{t("انصراف")}</Button>} />
           <Button onClick={pay} disabled={busy || !plans}>
-            پرداخت {formatToman(unitPrice * period)}
+            {t("پرداخت {amount}", { amount: formatToman(unitPrice * period) })}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -131,13 +139,15 @@ export function usePaymentCallback() {
       .post<{ status: string }>("/subscriptions/verify/", { authority, status })
       .then(async (result) => {
         if (result.status === "success") {
-          toast.success("پرداخت موفق بود", { description: "اشتراک شما فعال شد." });
+          toast.success(tr("پرداخت موفق بود"), {
+            description: tr("اشتراک شما فعال شد."),
+          });
           await bootstrap(); // refresh the account with its new tier
         } else {
-          toast.error("پرداخت ناموفق بود");
+          toast.error(tr("پرداخت ناموفق بود"));
         }
       })
-      .catch(() => toast.error("بررسی پرداخت ناموفق بود"))
+      .catch(() => toast.error(tr("بررسی پرداخت ناموفق بود")))
       .finally(() => router.replace("/settings"));
   }, [params, router, bootstrap]);
 }
