@@ -87,7 +87,6 @@ export function PublishWorkDialog({ artistId }: { artistId: string }) {
       toast.error(t("عنوان اثر را وارد کنید"));
       return;
     }
-    const isoDate = `${releaseDate}T00:00:00.000Z`;
 
     setBusy(true);
     try {
@@ -97,7 +96,7 @@ export function PublishWorkDialog({ artistId }: { artistId: string }) {
           title: title.trim(),
           genre,
           durationSec,
-          releaseDate: isoDate,
+          releaseDate: releaseDate,
           lyrics: lyrics.trim() || undefined,
           collaboratorIds: collaborators,
           audio: audioFile ?? undefined,
@@ -112,7 +111,7 @@ export function PublishWorkDialog({ artistId }: { artistId: string }) {
         created = await publishAlbum(artistId, {
           title: title.trim(),
           genre,
-          releaseDate: isoDate,
+          releaseDate: releaseDate,
           collaboratorIds: collaborators,
           tracks: validTracks.map((t) => ({ title: t.title.trim(), durationSec: t.durationSec })),
           cover: coverFile ?? undefined,
