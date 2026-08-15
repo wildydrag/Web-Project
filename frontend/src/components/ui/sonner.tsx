@@ -34,6 +34,12 @@ const Toaster = ({ ...props }: ToasterProps) => {
           "--normal-text": "var(--popover-foreground)",
           "--normal-border": "var(--border)",
           "--border-radius": "var(--radius)",
+          // Sonner's own stylesheet hardcodes a Latin font stack on
+          // [data-sonner-toaster], which overrides the inherited Estedad and
+          // leaves toasts in a different typeface from the rest of the app.
+          // An inline style outranks it, and `--font-sans` follows the
+          // interface language (Estedad in Persian, a Latin face in English).
+          fontFamily: "var(--font-sans)",
         } as React.CSSProperties
       }
       toastOptions={{
