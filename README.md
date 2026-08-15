@@ -110,6 +110,17 @@ PAYMENT_GATEWAY=fake
 
 ---
 
+## گزارش پروژه
+
+گزارش نهایی در فایل `Nava-Final-Report.pdf` (ریشه‌ی مخزن) است. متنِ منبع آن
+`docs/final-report.html` است؛ برای ساختن دوباره‌ی PDF:
+
+```bash
+cd docs && weasyprint final-report.html ../Nava-Final-Report.pdf
+```
+
+---
+
 ## اگر به مشکل خوردید
 
 **خطای «ارتباط با سرور برقرار نشد»** — بک‌اند بالا نیست، یا شما روی پورت اشتباهی
