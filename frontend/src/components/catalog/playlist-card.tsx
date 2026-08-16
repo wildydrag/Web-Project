@@ -12,7 +12,7 @@ import { useT } from "@/lib/i18n";
 /** Grid card for a playlist; links to its detail page, button plays it. */
 export function PlaylistCard({ playlist }: { playlist: Playlist }) {
   const t = useT();
-  const { playList } = usePlayback();
+  const { toggleList, isListPlaying } = usePlayback();
   const count = playlist.songIds.length;
 
   return (
@@ -23,8 +23,9 @@ export function PlaylistCard({ playlist }: { playlist: Playlist }) {
           <CardPlayButton
             onClick={(event) => {
               event.preventDefault();
-              playList(playlist.songIds, 0);
+              toggleList(playlist.songIds);
             }}
+            playing={isListPlaying(playlist.songIds)}
           />
         ) : null}
       </Link>

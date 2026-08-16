@@ -10,15 +10,6 @@ import { currentSongId, usePlayer } from "@/lib/stores/player-store";
 const TICK_MS = 250;
 
 /**
- * How far the store's position may drift from the element's before we treat it
- * as a deliberate seek rather than the echo of our own `timeupdate`.
- *
- * Without this the loop `timeupdate → setPosition → effect → currentTime =`
- * would fight itself and the track would stutter.
- */
-const SEEK_EPSILON_SEC = 0.75;
-
-/**
  * Drives playback for the current track.
  *
  * The real transport is an `<audio>` element: its `timeupdate` feeds
@@ -32,12 +23,10 @@ const SEEK_EPSILON_SEC = 0.75;
  */
 export function PlayerTransport() {
   const audioRef = useRef<HTMLAudioElement>(null);
-  /** The last position we published from `timeupdate`, to detect real seeks. */
-  const emittedRef = useRef(0);
 
   const isPlaying = usePlayer((s) => s.isPlaying);
   const songId = usePlayer(currentSongId);
-  const positionSec = usePlayer((s) => s.positionSec);
+  const seekRequestId = usePlayer((s) => s.seekRequestId);
   const volume = usePlayer((s) => s.volume);
   const muted = usePlayer((s) => s.muted);
   const setPosition = usePlayer((s) => s.setPosition);
@@ -53,7 +42,6 @@ export function PlayerTransport() {
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
-    emittedRef.current = 0;
     if (src) {
       audio.src = src;
       audio.load();
@@ -88,14 +76,15 @@ export function PlayerTransport() {
   }, [volume, muted]);
 
   // ── Seeking: store → element ──────────────────────────────────────────────
+  // Driven by `seekRequestId`, not by `positionSec`. Comparing positions cannot
+  // work: while a track plays, a `timeupdate` lands between the click and this
+  // effect and overwrites the requested position, so the seek is lost — which is
+  // exactly what "clicking the bar does nothing" looked like.
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio || !src) return;
-    if (Math.abs(positionSec - emittedRef.current) > SEEK_EPSILON_SEC) {
-      audio.currentTime = positionSec;
-      emittedRef.current = positionSec;
-    }
-  }, [positionSec, src]);
+    if (!audio || !src || seekRequestId === 0) return;
+    audio.currentTime = usePlayer.getState().seekTargetSec;
+  }, [seekRequestId, src]);
 
   // ── Simulated clock, only for tracks with no audio ────────────────────────
   useEffect(() => {
@@ -115,11 +104,7 @@ export function PlayerTransport() {
     <audio
       ref={audioRef}
       preload="metadata"
-      onTimeUpdate={(event) => {
-        const at = event.currentTarget.currentTime;
-        emittedRef.current = at;
-        setPosition(at);
-      }}
+      onTimeUpdate={(event) => setPosition(event.currentTarget.currentTime)}
       onEnded={handleTrackEnd}
       // A file that will not load must not freeze the queue. Guarded on `src`
       // so clearing the element does not count as a failure and skip a track.

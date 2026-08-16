@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { api } from "@/lib/api/client";
 import { TIERS } from "@/lib/config";
 import { useDb } from "@/lib/stores/db-store";
-import { usePlayer } from "@/lib/stores/player-store";
+import { currentSongId, usePlayer } from "@/lib/stores/player-store";
 import { useCurrentUser } from "@/lib/stores/session-store";
 import { tr } from "@/lib/i18n";
 
@@ -23,6 +23,9 @@ export function usePlayback() {
   const user = useCurrentUser();
   const playContext = usePlayer((s) => s.playContext);
   const playSongInContext = usePlayer((s) => s.playSongInContext);
+  const togglePlay = usePlayer((s) => s.togglePlay);
+  const currentId = usePlayer(currentSongId);
+  const isPlaying = usePlayer((s) => s.isPlaying);
   const incrementDailyStreams = useDb((s) => s.incrementDailyStreams);
 
   const remaining = user
@@ -61,6 +64,34 @@ export function usePlayback() {
       if (songIds.length === 0 || !guardCap()) return;
       playContext(songIds, startIndex);
       recordStream(songIds[startIndex] ?? songIds[0]);
+    },
+
+    /** True when the track now loaded belongs to `songIds`. */
+    isCurrentList(songIds: string[]) {
+      return currentId !== null && songIds.includes(currentId);
+    },
+
+    /** True when a track from `songIds` is loaded *and* sounding. */
+    isListPlaying(songIds: string[]) {
+      return isPlaying && currentId !== null && songIds.includes(currentId);
+    },
+
+    /**
+     * What a cover's play/pause button should do.
+     *
+     * If this list is already the one loaded, pause or resume it; only start it
+     * from the top when it is not. Restarting a list whose button is showing a
+     * pause icon is the bug this replaces.
+     */
+    toggleList(songIds: string[]) {
+      if (songIds.length === 0) return;
+      if (currentId !== null && songIds.includes(currentId)) {
+        togglePlay();
+        return;
+      }
+      if (!guardCap()) return;
+      playContext(songIds, 0);
+      recordStream(songIds[0]);
     },
   };
 }

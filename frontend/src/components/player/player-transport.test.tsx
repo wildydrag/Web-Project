@@ -131,6 +131,43 @@ describe("the store drives the element", () => {
     expect(audio.currentTime).toBeCloseTo(120);
   });
 
+  it("applies a seek even while the track is playing", () => {
+    // The regression this guards: a `timeupdate` landing between the click and
+    // the effect used to overwrite the requested position, so seeking during
+    // playback silently did nothing.
+    const audio = renderTransport();
+    usePlayer.setState({ isPlaying: true });
+    act(() => {
+      Object.defineProperty(audio, "currentTime", { value: 6, writable: true, configurable: true });
+      audio.dispatchEvent(new Event("timeupdate"));   // clock says 6s
+      usePlayer.getState().seek(1);                   // user clicks 1s
+      audio.dispatchEvent(new Event("timeupdate"));   // a tick still in flight
+    });
+    expect(audio.currentTime).toBeCloseTo(1);
+  });
+
+  it("applies a seek to the same position twice", () => {
+    // Two clicks on the same spot are two separate intents; the second must not
+    // be swallowed just because the position did not change.
+    const audio = renderTransport();
+    act(() => usePlayer.getState().seek(4));
+    act(() => {
+      Object.defineProperty(audio, "currentTime", { value: 7, writable: true, configurable: true });
+      audio.dispatchEvent(new Event("timeupdate"));
+    });
+    act(() => usePlayer.getState().seek(4));
+    expect(audio.currentTime).toBeCloseTo(4);
+  });
+
+  it("does not touch the element on the first render", () => {
+    // A fresh mount has made no seek request, so it must not force the element
+    // back to 0 and interrupt a resumed track.
+    const audio = renderTransport();
+    Object.defineProperty(audio, "currentTime", { value: 5, writable: true, configurable: true });
+    act(() => usePlayer.getState().setVolume(55));
+    expect(audio.currentTime).toBeCloseTo(5);
+  });
+
   it("falls back to paused when the browser refuses to start audio", async () => {
     // Autoplay policy can reject play(); the UI must not claim to be playing.
     vi.spyOn(window.HTMLMediaElement.prototype, "play").mockRejectedValue(

@@ -3,21 +3,19 @@
 /**
  * The music player transport.
  *
- * Phase 1 is a mock, so this store is a *simulated transport*: it owns the queue,
- * playing state, position, volume, repeat and shuffle — i.e. the full behaviour
- * the brief asks for — without a real audio element. A small `<PlayerTransport>`
- * component advances {@link PlayerState.positionSec} on a timer and calls
- * {@link PlayerState.handleTrackEnd} when a track finishes.
+ * This store owns the queue, playing state, position, volume, repeat and
+ * shuffle. It deliberately knows nothing about *how* sound is produced:
+ * `<PlayerTransport>` holds the `<audio>` element, reports the element's clock
+ * through {@link PlayerState.setPosition}, calls
+ * {@link PlayerState.handleTrackEnd} when a track finishes, and follows this
+ * store's play/pause, volume and seek requests.
  *
- * ── Phase 2 seam ──────────────────────────────────────────────────────────
- * To play real audio, the transport component points an `<audio>` element at the
- * current track's URL and mirrors its `timeupdate`/`ended` events onto
- * `setPosition`/`handleTrackEnd`, and `seek`/`setVolume` drive the element. None
- * of the queue/repeat/shuffle logic below has to change.
+ * That split is why the queue logic below survived the move from a simulated
+ * clock to real playback without a single change.
  *
- * The store is intentionally free of any database or toast dependency so the
- * playback *policy* (e.g. the basic-tier daily stream cap) lives in the
- * `usePlayback` hook instead, and the transport itself stays trivially testable.
+ * The store is also free of any database or toast dependency, so playback
+ * *policy* (e.g. the basic-tier daily stream cap) lives in the `usePlayback`
+ * hook instead and the transport stays trivially testable.
  */
 
 import { create } from "zustand";
@@ -45,6 +43,23 @@ export interface PlayerState {
 
   isPlaying: boolean;
   positionSec: number;
+  /**
+   * Bumped by {@link PlayerState.seek} and by nothing else.
+   *
+   * The transport cannot tell a user's seek from its own `timeupdate` echo by
+   * looking at `positionSec` alone — while a track plays, the next tick
+   * overwrites the requested position before it can be applied, and the seek is
+   * silently lost. Watching this counter makes the intent explicit.
+   */
+  seekRequestId: number;
+  /**
+   * Where that request wants to land.
+   *
+   * Kept separate from `positionSec` because the transport applies it
+   * asynchronously: by the time the effect runs, another `timeupdate` may have
+   * moved `positionSec` on, and reading it then would seek to the wrong place.
+   */
+  seekTargetSec: number;
   volume: number; // 0–100
   muted: boolean;
   repeat: RepeatMode;
@@ -98,6 +113,8 @@ export const usePlayer = create<PlayerState>()(
       index: 0,
       isPlaying: false,
       positionSec: 0,
+      seekRequestId: 0,
+      seekTargetSec: 0,
       volume: 80,
       muted: false,
       repeat: "off",
@@ -200,7 +217,15 @@ export const usePlayer = create<PlayerState>()(
         }
       },
 
-      seek: (sec) => set({ positionSec: Math.max(0, sec) }),
+      seek: (sec) =>
+        set((s) => {
+          const target = Math.max(0, sec);
+          return {
+            positionSec: target,
+            seekTargetSec: target,
+            seekRequestId: s.seekRequestId + 1,
+          };
+        }),
       setPosition: (sec) => set({ positionSec: sec }),
 
       handleTrackEnd: () => {
