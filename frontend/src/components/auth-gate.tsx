@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { FullScreenLoader } from "@/components/full-screen-loader";
 import { useMounted } from "@/lib/hooks/use-mounted";
-import { useCurrentUser } from "@/lib/stores/session-store";
+import { useCurrentUser, useSession } from "@/lib/stores/session-store";
 import type { Role } from "@/lib/types";
 
 /** Where a role lands when it isn't allowed on the current route. */
@@ -28,21 +28,23 @@ export function AuthGate({
   allow?: Role[];
 }) {
   const mounted = useMounted();
+  const status = useSession((s) => s.status);
   const user = useCurrentUser();
   const router = useRouter();
 
   const allowed = !allow || (user ? allow.includes(user.role) : false);
+  const settling = !mounted || status === "loading";
 
   useEffect(() => {
-    if (!mounted) return;
+    if (settling) return; // wait for session bootstrap to resolve
     if (!user) {
       router.replace("/login");
     } else if (!allowed) {
       router.replace(fallbackFor(user.role));
     }
-  }, [mounted, user, allowed, router]);
+  }, [settling, user, allowed, router]);
 
-  if (!mounted || !user || !allowed) {
+  if (settling || !user || !allowed) {
     return <FullScreenLoader />;
   }
   return <>{children}</>;

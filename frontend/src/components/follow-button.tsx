@@ -5,6 +5,7 @@ import { UserCheck, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useDb } from "@/lib/stores/db-store";
 import { useCurrentUser } from "@/lib/stores/session-store";
+import { useT } from "@/lib/i18n";
 
 /** Toggles whether the current user follows an artist (or another user). */
 export function FollowButton({
@@ -14,6 +15,7 @@ export function FollowButton({
   targetId: string;
   size?: "sm" | "default" | "lg";
 }) {
+  const t = useT();
   const user = useCurrentUser();
   const toggleFollow = useDb((s) => s.toggleFollow);
 
@@ -29,12 +31,12 @@ export function FollowButton({
       {following ? (
         <>
           <UserCheck />
-          دنبال می‌کنید
+          {t("دنبال می‌کنید")}
         </>
       ) : (
         <>
           <UserPlus />
-          دنبال کردن
+          {t("دنبال کردن")}
         </>
       )}
     </Button>

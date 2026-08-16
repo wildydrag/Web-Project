@@ -18,8 +18,10 @@ import { formatCompact } from "@/lib/format";
 import { usePlayback } from "@/lib/hooks/use-playback";
 import { useDb } from "@/lib/stores/db-store";
 import { useCurrentUser } from "@/lib/stores/session-store";
+import { useT } from "@/lib/i18n";
 
 export default function ArtistPage() {
+  const t = useT();
   const { id } = useParams<{ id: string }>();
   const artists = useDb((s) => s.artists);
   const albums = useDb((s) => s.albums);
@@ -28,7 +30,7 @@ export default function ArtistPage() {
   const { playList } = usePlayback();
 
   const artist = byId(artists, id);
-  if (!artist) return <NotFoundBlock title="هنرمند یافت نشد" backHref="/library" />;
+  if (!artist) return <NotFoundBlock title={t("هنرمند یافت نشد")} backHref="/library" />;
 
   const artistAlbums = getArtistAlbums(albums, artist.id);
   const singles = getArtistSingles(songs, artist.id);
@@ -51,7 +53,7 @@ export default function ArtistPage() {
             {artist.verified ? <VerifiedBadge className="size-5" /> : null}
           </div>
           <p className="mx-auto max-w-2xl text-sm text-muted-foreground sm:mx-0">
-            {artist.bio || "بیوگرافی ثبت نشده است."}
+            {artist.bio || t("بیوگرافی ثبت نشده است.")}
           </p>
           <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
             <Button
@@ -59,7 +61,7 @@ export default function ArtistPage() {
               disabled={allSongIds.length === 0}
             >
               <Play className="fill-current" />
-              پخش آثار
+              {t("پخش آثار")}
             </Button>
             <FollowButton targetId={artist.id} />
           </div>
@@ -70,17 +72,17 @@ export default function ArtistPage() {
       {isGold ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <StatTile
-            label="شنوندگان ماهانه"
+            label={t("شنوندگان ماهانه")}
             value={formatCompact(artist.monthlyListeners)}
             icon={Headphones}
           />
           <StatTile
-            label="کل استریم‌ها"
+            label={t("کل استریم‌ها")}
             value={formatCompact(artist.totalStreams)}
             icon={Radio}
           />
           <StatTile
-            label="دنبال‌کننده"
+            label={t("دنبال‌کننده")}
             value={formatCompact(artist.followerCount)}
             icon={Users}
           />
@@ -89,7 +91,7 @@ export default function ArtistPage() {
 
       {artistAlbums.length > 0 ? (
         <section>
-          <SectionHeader title="آلبوم‌ها" />
+          <SectionHeader title={t("آلبوم‌ها")} />
           <MediaGrid>
             {artistAlbums.map((album) => (
               <AlbumCard key={album.id} album={album} />
@@ -100,7 +102,7 @@ export default function ArtistPage() {
 
       {singles.length > 0 ? (
         <section>
-          <SectionHeader title="تک‌آهنگ‌ها" />
+          <SectionHeader title={t("تک‌آهنگ‌ها")} />
           <MediaGrid>
             {singles.map((song) => (
               <SongCard key={song.id} song={song} context={singleIds} />
@@ -110,7 +112,7 @@ export default function ArtistPage() {
       ) : null}
 
       {artistAlbums.length === 0 && singles.length === 0 ? (
-        <p className="text-sm text-muted-foreground">هنوز اثری منتشر نشده است.</p>
+        <p className="text-sm text-muted-foreground">{t("هنوز اثری منتشر نشده است.")}</p>
       ) : null}
     </div>
   );

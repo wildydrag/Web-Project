@@ -169,6 +169,10 @@
   html {
     @apply font-sans;
   }
+  /* Latin needs less leading than Persian. */
+  html[lang="en"] body {
+    line-height: 1.6;
+  }
   /* Numeric data (durations, counts, prices) line up in tables and the player. */
   .tabular {
     font-variant-numeric: tabular-nums;
@@ -210,4 +214,18 @@
   50% {
     transform: scaleY(1);
   }
+}
+
+/*
+ * Estedad is a Persian typeface. Its Latin glyphs are serviceable, but the
+ * interface reads better in a native Latin face when the language is English,
+ * so the `--font-sans` variable that next/font sets on <html> is overridden.
+ *
+ * This rule is deliberately *outside* any `@layer`: next/font's generated class
+ * is unlayered, and unlayered styles win over layered ones no matter how
+ * specific the layered selector is.
+ */
+html[lang="en"] {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
 }

@@ -3,6 +3,7 @@
 import { Pause, Play } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 /** Circular play/pause button that floats over a cover and reveals on hover. */
 export function CardPlayButton({
@@ -14,10 +15,11 @@ export function CardPlayButton({
   playing?: boolean;
   className?: string;
 }) {
+  const t = useT();
   return (
     <button
       onClick={onClick}
-      aria-label={playing ? "توقف" : "پخش"}
+      aria-label={playing ? t("توقف") : t("پخش")}
       className={cn(
         "absolute bottom-2 end-2 flex size-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-all",
         playing

@@ -9,8 +9,10 @@ import { UserAvatar } from "@/components/user-avatar";
 import { Button } from "@/components/ui/button";
 import { ROLE_LABELS } from "@/lib/config";
 import { useCurrentUser, useSession } from "@/lib/stores/session-store";
+import { useT } from "@/lib/i18n";
 
 export function DashboardHeader() {
+  const t = useT();
   const user = useCurrentUser();
   const logout = useSession((s) => s.logout);
   const router = useRouter();
@@ -33,7 +35,7 @@ export function DashboardHeader() {
         <Button
           variant="ghost"
           size="icon"
-          aria-label="خروج"
+          aria-label={t("خروج")}
           onClick={() => {
             logout();
             router.replace("/login");

@@ -11,9 +11,11 @@ import { Button } from "@/components/ui/button";
 import { unreadNotificationCount } from "@/lib/data/selectors";
 import { useDb } from "@/lib/stores/db-store";
 import { useCurrentUser } from "@/lib/stores/session-store";
+import { useT } from "@/lib/i18n";
 
 /** Global search box that routes to the library with the query applied. */
 function SearchBox() {
+  const t = useT();
   const router = useRouter();
   const [query, setQuery] = useState("");
 
@@ -29,8 +31,8 @@ function SearchBox() {
       <input
         value={query}
         onChange={(event) => setQuery(event.target.value)}
-        placeholder="جستجوی آهنگ، آلبوم یا هنرمند…"
-        aria-label="جستجو"
+        placeholder={t("جستجوی آهنگ، آلبوم یا هنرمند…")}
+        aria-label={t("جستجو")}
         className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-muted-foreground"
       />
     </form>
@@ -39,6 +41,7 @@ function SearchBox() {
 
 /** Bell linking to notifications, with an unread indicator. */
 function NotificationsBell() {
+  const t = useT();
   const user = useCurrentUser();
   const notifications = useDb((s) => s.notifications);
   const unread = user ? unreadNotificationCount(notifications, user.id) : 0;
@@ -54,7 +57,7 @@ function NotificationsBell() {
       {unread > 0 ? (
         <span className="absolute top-1.5 end-1.5 size-2 rounded-full bg-primary ring-2 ring-background" />
       ) : null}
-      <span className="sr-only">اعلانات</span>
+      <span className="sr-only">{t("اعلانات")}</span>
     </Button>
   );
 }

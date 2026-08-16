@@ -5,12 +5,14 @@ import { Pause, Play, Repeat, Repeat1, Shuffle, SkipBack, SkipForward } from "lu
 import { Button } from "@/components/ui/button";
 import { usePlayer } from "@/lib/stores/player-store";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 /**
  * Transport buttons: shuffle · previous · play/pause · next · repeat.
  * Forced `dir="ltr"` so the cluster reads like a standard media player.
  */
 export function PlayerControls({ size = "default" }: { size?: "default" | "lg" }) {
+  const t = useT();
   const isPlaying = usePlayer((s) => s.isPlaying);
   const repeat = usePlayer((s) => s.repeat);
   const shuffle = usePlayer((s) => s.shuffle);
@@ -30,19 +32,19 @@ export function PlayerControls({ size = "default" }: { size?: "default" | "lg" }
         size="icon-sm"
         onClick={toggleShuffle}
         aria-pressed={shuffle}
-        aria-label="پخش تصادفی"
+        aria-label={t("پخش تصادفی")}
         className={cn(shuffle && "text-primary")}
       >
         <Shuffle />
       </Button>
 
-      <Button variant="ghost" size={skipSize} onClick={previous} aria-label="آهنگ قبلی">
+      <Button variant="ghost" size={skipSize} onClick={previous} aria-label={t("آهنگ قبلی")}>
         <SkipBack className="fill-current" />
       </Button>
 
       <Button
         onClick={togglePlay}
-        aria-label={isPlaying ? "توقف" : "پخش"}
+        aria-label={isPlaying ? t("توقف") : t("پخش")}
         className={cn("rounded-full", big ? "size-14" : "size-11")}
       >
         {isPlaying ? (
@@ -52,7 +54,7 @@ export function PlayerControls({ size = "default" }: { size?: "default" | "lg" }
         )}
       </Button>
 
-      <Button variant="ghost" size={skipSize} onClick={next} aria-label="آهنگ بعدی">
+      <Button variant="ghost" size={skipSize} onClick={next} aria-label={t("آهنگ بعدی")}>
         <SkipForward className="fill-current" />
       </Button>
 
@@ -60,7 +62,7 @@ export function PlayerControls({ size = "default" }: { size?: "default" | "lg" }
         variant="ghost"
         size="icon-sm"
         onClick={cycleRepeat}
-        aria-label="حالت تکرار"
+        aria-label={t("حالت تکرار")}
         className={cn(repeat !== "off" && "text-primary")}
       >
         {repeat === "one" ? <Repeat1 /> : <Repeat />}

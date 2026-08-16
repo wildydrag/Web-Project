@@ -14,6 +14,7 @@ import { useDb } from "@/lib/stores/db-store";
 import { currentSongId, usePlayer } from "@/lib/stores/player-store";
 import type { Song } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 /**
  * A track row for lists (albums, playlists, search results, artist pages).
@@ -31,6 +32,7 @@ export function SongRow({
   index?: number;
   showAlbum?: boolean;
 }) {
+  const t = useT();
   const artists = useDb((s) => s.artists);
   const albums = useDb((s) => s.albums);
   const { playSong } = usePlayback();
@@ -63,7 +65,7 @@ export function SongRow({
             </span>
             <button
               onClick={play}
-              aria-label="پخش"
+              aria-label={t("پخش")}
               className="hidden text-foreground group-hover:block"
             >
               <Play className="size-4 fill-current" />
@@ -74,6 +76,7 @@ export function SongRow({
 
       <CoverArt
         seed={song.coverSeed}
+        url={song.coverUrl}
         label={song.title}
         className="size-10 shrink-0"
         rounded="rounded-md"

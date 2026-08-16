@@ -1,60 +1,33 @@
 "use client";
 
 /**
- * The mock "database".
+ * The Nava data store (Phase 2 — backed by the Django/DRF API).
  *
- * This Zustand store holds the entire {@link NavaDatabase} in memory, seeded
- * deterministically and persisted to `localStorage`. Every mutation the UI needs
- * lives here as an action, which keeps components free of persistence details.
- *
- * ── Phase 2 seam ──────────────────────────────────────────────────────────
- * When the Django/DRF backend exists, this is the file that changes: the action
- * bodies become `fetch`/`axios` calls and the persisted arrays become server
- * responses. The component-facing action names and the {@link NavaDatabase}
- * shapes are designed to survive that swap unchanged.
+ * ── Phase 2 seam (now crossed) ─────────────────────────────────────────────
+ * This store keeps the exact same component-facing shape ({@link NavaDatabase})
+ * and action names it had in Phase 1, but the bodies now talk to the backend:
+ * {@link DbState.hydrate} fills the arrays from the API, and each mutation does
+ * an optimistic local update plus a background API call. Because the interface
+ * is unchanged, the ~45 components that read `useDb` selectors and call these
+ * actions did not need to change.
  */
 
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { toast } from "sonner";
 
-import { TIERS } from "@/lib/config";
-import { createSeedDatabase } from "@/lib/mock/seed";
+import { api } from "@/lib/api/client";
 import type {
   Album,
   AppNotification,
   Artist,
   NavaDatabase,
-  NotificationKind,
   Playlist,
   Song,
   SubscriptionTier,
   TicketStatus,
   User,
 } from "@/lib/types";
-
-/** Short unique id with a readable prefix, e.g. `pl_3f8a1c`. */
-function uid(prefix: string): string {
-  const rand =
-    typeof crypto !== "undefined" && "randomUUID" in crypto
-      ? crypto.randomUUID().slice(0, 6)
-      : Math.random().toString(36).slice(2, 8);
-  return `${prefix}_${rand}`;
-}
-
-const nowIso = () => new Date().toISOString();
-
-export interface NewListenerInput {
-  displayName: string;
-  email: string;
-  gender: User["gender"];
-  birthDate?: string;
-}
-
-export interface NewArtistInput {
-  name: string;
-  email: string;
-  portfolio: string;
-}
+import { tr } from "@/lib/i18n";
 
 export interface PublishSingleInput {
   title: string;
@@ -63,6 +36,9 @@ export interface PublishSingleInput {
   releaseDate: string;
   lyrics?: string;
   collaboratorIds?: string[];
+  /** Real uploads — sent as multipart when present. */
+  audio?: File;
+  cover?: File;
 }
 
 export interface PublishAlbumInput {
@@ -70,16 +46,72 @@ export interface PublishAlbumInput {
   genre: string;
   releaseDate: string;
   collaboratorIds?: string[];
-  tracks: { title: string; durationSec: number; lyrics?: string }[];
+  tracks: {
+    title: string;
+    durationSec: number;
+    lyrics?: string;
+    /** The track's own audio file; without one the track cannot be played. */
+    audio?: File;
+    /** Optional per-track artwork; falls back to the album cover. */
+    cover?: File;
+  }[];
+  cover?: File;
 }
 
+/**
+ * Build a multipart body. Scalars are appended as strings; repeated keys carry
+ * lists, and nested objects (album tracks) are sent as a JSON string field.
+ */
+function toFormData(fields: Record<string, unknown>): FormData {
+  const form = new FormData();
+  for (const [key, value] of Object.entries(fields)) {
+    if (value === undefined || value === null) continue;
+    if (value instanceof File) {
+      form.append(key, value);
+    } else if (Array.isArray(value)) {
+      if (value.length === 0) continue;
+      if (typeof value[0] === "object") {
+        form.append(key, JSON.stringify(value));
+      } else {
+        value.forEach((item) => form.append(key, String(item)));
+      }
+    } else {
+      form.append(key, String(value));
+    }
+  }
+  return form;
+}
+
+/** Fire-and-forget a background sync; surface failures without blocking the UI. */
+function bg(promise: Promise<unknown>) {
+  promise.catch((error) => {
+    console.error("[nava sync]", error);
+    toast.error(tr("همگام‌سازی با سرور ناموفق بود"));
+  });
+}
+
+const EMPTY: NavaDatabase = {
+  users: [],
+  artists: [],
+  songs: [],
+  albums: [],
+  playlists: [],
+  notifications: [],
+  tickets: [],
+  audits: [],
+  settings: { prices: { silver: 0, gold: 0 } },
+};
+
 interface DbActions {
-  /** Wipe local changes and restore the seed (used by Settings / tests). */
+  /** Load the current user's data from the API into the store. */
+  hydrate: (user: User) => Promise<void>;
+  /** Merge the authenticated account into `users` (called on login/bootstrap). */
+  setCurrentUserData: (user: User) => void;
+  /** Clear everything (logout). */
+  reset: () => void;
   resetDatabase: () => void;
 
   // Accounts -----------------------------------------------------------------
-  addListener: (input: NewListenerInput) => User;
-  addArtistApplicant: (input: NewArtistInput) => { user: User; artist: Artist };
   updateUser: (userId: string, patch: Partial<User>) => void;
   deleteUser: (userId: string) => void;
   toggleFollow: (userId: string, targetId: string) => void;
@@ -91,24 +123,20 @@ interface DbActions {
   rejectArtist: (artistId: string, reason: string) => void;
 
   // Catalog (artist studio) --------------------------------------------------
-  publishSingle: (artistId: string, input: PublishSingleInput) => Song;
-  publishAlbum: (artistId: string, input: PublishAlbumInput) => Album;
+  publishSingle: (artistId: string, input: PublishSingleInput) => Promise<Song | null>;
+  publishAlbum: (artistId: string, input: PublishAlbumInput) => Promise<Album | null>;
   updateSong: (songId: string, patch: Partial<Song>) => void;
   updateAlbum: (albumId: string, patch: Partial<Album>) => void;
   deleteSong: (songId: string) => void;
   deleteAlbum: (albumId: string) => void;
 
   // Playlists ----------------------------------------------------------------
-  createPlaylist: (ownerId: string, name: string) => Playlist | null;
+  createPlaylist: (ownerId: string, name: string) => Promise<Playlist | null>;
   renamePlaylist: (playlistId: string, name: string) => void;
   deletePlaylist: (playlistId: string) => void;
   toggleSongInPlaylist: (playlistId: string, songId: string) => void;
 
   // Notifications ------------------------------------------------------------
-  addNotification: (
-    notification: Omit<AppNotification, "id" | "createdAt" | "read"> &
-      Partial<Pick<AppNotification, "read">>,
-  ) => void;
   markNotificationRead: (notificationId: string) => void;
   markAllNotificationsRead: (userId: string) => void;
   deleteNotification: (notificationId: string) => void;
@@ -122,440 +150,362 @@ interface DbActions {
 
   // Platform settings --------------------------------------------------------
   updatePrices: (prices: { silver: number; gold: number }) => void;
-
-  /** Internal: fan a "new release" notification out to an artist's followers. */
-  notifyFollowersOfRelease: (artistId: string, title: string, href: string) => void;
 }
 
 export type DbState = NavaDatabase & DbActions;
 
-export const useDb = create<DbState>()(
-  persist(
-    (set, get) => ({
-      ...createSeedDatabase(),
+export const useDb = create<DbState>()((set, get) => ({
+  ...EMPTY,
 
-      resetDatabase: () => set(createSeedDatabase()),
+  // ── Bootstrap ───────────────────────────────────────────────────────────
+  hydrate: async (user) => {
+    const isStaff = user.role === "support" || user.role === "admin";
+    const isAdmin = user.role === "admin";
+    const [artists, songs, albums, playlists, notifications, prices] = await Promise.all([
+      api.list<Artist>("/artists/"),
+      api.list<Song>("/songs/"),
+      api.list<Album>("/albums/"),
+      api.list<Playlist>("/playlists/"),
+      api.list<AppNotification>("/notifications/"),
+      api.get<{ silverPrice: number; goldPrice: number }>("/platform-settings/"),
+    ]);
+    const tickets = isStaff ? await api.list<NavaDatabase["tickets"][number]>("/tickets/") : [];
+    const audits = isAdmin ? await api.list<NavaDatabase["audits"][number]>("/dashboard/audits/") : [];
+    set((s) => ({
+      artists,
+      songs,
+      albums,
+      playlists,
+      notifications,
+      tickets,
+      audits,
+      settings: { prices: { silver: prices.silverPrice, gold: prices.goldPrice } },
+      users: [user, ...s.users.filter((u) => u.id !== user.id)],
+    }));
+  },
 
-      // ── Accounts ──────────────────────────────────────────────────────────
-      addListener: (input) => {
-        const user: User = {
-          id: uid("us"),
-          email: input.email,
-          role: "listener",
-          displayName: input.displayName,
-          username: `@nava_${Math.floor(1000 + Math.random() * 9000)}`,
-          avatarSeed: input.displayName || input.email,
-          gender: input.gender,
-          birthDate: input.birthDate,
-          createdAt: nowIso(),
-          subscriptionTier: "basic",
-          followingIds: [],
-          followerCount: 0,
-          dailyStreams: 0,
-          preferences: { language: "fa", volume: 80, notificationsEnabled: true },
+  setCurrentUserData: (user) =>
+    set((s) => ({ users: [user, ...s.users.filter((u) => u.id !== user.id)] })),
+
+  reset: () => set({ ...EMPTY }),
+  resetDatabase: () => {
+    const user = get().users.find(Boolean);
+    if (user) bg(get().hydrate(user));
+  },
+
+  // ── Accounts ─────────────────────────────────────────────────────────────
+  updateUser: (userId, patch) => {
+    set((s) => ({ users: s.users.map((u) => (u.id === userId ? { ...u, ...patch } : u)) }));
+    // Only the current account is server-editable via /auth/me.
+    const { preferences, displayName, gender, birthDate } = patch;
+    const body: Record<string, unknown> = {};
+    if (displayName !== undefined) body.displayName = displayName;
+    if (gender !== undefined) body.gender = gender;
+    if (birthDate !== undefined) body.birthDate = birthDate;
+    if (preferences !== undefined) body.preferences = preferences;
+    if (Object.keys(body).length) bg(api.patch("/auth/me/", body));
+  },
+
+  deleteUser: (userId) => {
+    set((s) => ({
+      users: s.users.filter((u) => u.id !== userId),
+      playlists: s.playlists.filter((p) => p.ownerId !== userId),
+      notifications: s.notifications.filter((n) => n.userId !== userId),
+    }));
+    bg(api.del("/auth/me/"));
+  },
+
+  toggleFollow: (userId, targetId) => {
+    set((s) => ({
+      users: s.users.map((u) => {
+        if (u.id !== userId) return u;
+        const following = u.followingIds.includes(targetId);
+        return {
+          ...u,
+          followingIds: following
+            ? u.followingIds.filter((id) => id !== targetId)
+            : [...u.followingIds, targetId],
         };
-        set((s) => ({ users: [...s.users, user] }));
-        return user;
-      },
-
-      addArtistApplicant: (input) => {
-        const artistId = uid("ar");
-        const userId = uid("us");
-        const artist: Artist = {
-          id: artistId,
-          userId,
-          name: input.name,
-          bio: "",
-          avatarSeed: input.name || input.email,
-          genres: [],
-          verified: false,
-          status: "pending",
-          portfolio: input.portfolio,
-          requestedAt: nowIso(),
-          followerCount: 0,
-          monthlyListeners: 0,
-          totalStreams: 0,
-        };
-        const user: User = {
-          id: userId,
-          email: input.email,
-          role: "artist",
-          displayName: input.name,
-          username: `@nava_artist_${Math.floor(100 + Math.random() * 900)}`,
-          avatarSeed: input.name || input.email,
-          gender: "unspecified",
-          createdAt: nowIso(),
-          subscriptionTier: "basic",
-          followingIds: [],
-          followerCount: 0,
-          dailyStreams: 0,
-          preferences: { language: "fa", volume: 80, notificationsEnabled: true },
-          artistId,
-        };
-        // Notify staff so the request surfaces in their dashboards/notifications.
-        const staff = get().users.filter(
-          (u) => u.role === "support" || u.role === "admin",
-        );
-        const staffNotifications: AppNotification[] = staff.map((u) => ({
-          id: uid("nt"),
-          userId: u.id,
-          kind: "new_artist_request",
-          title: "درخواست احراز هویت جدید",
-          body: `${input.name} درخواست حساب هنرمند ثبت کرد.`,
-          createdAt: nowIso(),
-          read: false,
-          href: "/dashboard/approvals",
-        }));
-        set((s) => ({
-          users: [...s.users, user],
-          artists: [...s.artists, artist],
-          notifications: [...staffNotifications, ...s.notifications],
-        }));
-        return { user, artist };
-      },
-
-      updateUser: (userId, patch) =>
-        set((s) => ({
-          users: s.users.map((u) => (u.id === userId ? { ...u, ...patch } : u)),
-        })),
-
-      deleteUser: (userId) =>
-        set((s) => ({
-          users: s.users.filter((u) => u.id !== userId),
-          playlists: s.playlists.filter((p) => p.ownerId !== userId),
-          notifications: s.notifications.filter((n) => n.userId !== userId),
-        })),
-
-      toggleFollow: (userId, targetId) =>
-        set((s) => ({
-          users: s.users.map((u) => {
-            if (u.id !== userId) return u;
-            const following = u.followingIds.includes(targetId);
-            return {
-              ...u,
-              followingIds: following
-                ? u.followingIds.filter((id) => id !== targetId)
-                : [...u.followingIds, targetId],
-            };
-          }),
-          // Reflect the change in the target's follower count.
-          artists: s.artists.map((a) =>
-            a.id === targetId
-              ? {
-                  ...a,
-                  followerCount:
-                    a.followerCount +
-                    (s.users.find((u) => u.id === userId)?.followingIds.includes(targetId)
-                      ? -1
-                      : 1),
-                }
-              : a,
-          ),
-        })),
-
-      setSubscription: (userId, tier) =>
-        set((s) => ({
-          users: s.users.map((u) =>
-            u.id === userId
-              ? {
-                  ...u,
-                  subscriptionTier: tier,
-                  subscriptionRenewsAt:
-                    tier === "basic"
-                      ? undefined
-                      : new Date(Date.now() + 30 * 864e5).toISOString(),
-                }
-              : u,
-          ),
-        })),
-
-      incrementDailyStreams: (userId) =>
-        set((s) => ({
-          users: s.users.map((u) =>
-            u.id === userId ? { ...u, dailyStreams: u.dailyStreams + 1 } : u,
-          ),
-        })),
-
-      // ── Artist verification ───────────────────────────────────────────────
-      approveArtist: (artistId) => {
-        const artist = get().artists.find((a) => a.id === artistId);
-        if (!artist) return;
-        set((s) => ({
-          artists: s.artists.map((a) =>
-            a.id === artistId
-              ? { ...a, status: "approved", verified: true, rejectionReason: undefined }
-              : a,
-          ),
-          notifications: [
-            {
-              id: uid("nt"),
-              userId: artist.userId,
-              kind: "artist_verdict" as NotificationKind,
-              title: "حساب هنرمندی شما تایید شد",
-              body: "اکنون می‌توانید آثار خود را منتشر کنید.",
-              createdAt: nowIso(),
-              read: false,
-              href: "/studio",
-            },
-            ...s.notifications,
-          ],
-        }));
-      },
-
-      rejectArtist: (artistId, reason) => {
-        const artist = get().artists.find((a) => a.id === artistId);
-        if (!artist) return;
-        set((s) => ({
-          artists: s.artists.map((a) =>
-            a.id === artistId ? { ...a, status: "rejected", verified: false, rejectionReason: reason } : a,
-          ),
-          notifications: [
-            {
-              id: uid("nt"),
-              userId: artist.userId,
-              kind: "artist_verdict" as NotificationKind,
-              title: "درخواست هنرمندی شما رد شد",
-              body: `دلیل: ${reason}`,
-              createdAt: nowIso(),
-              read: false,
-            },
-            ...s.notifications,
-          ],
-        }));
-      },
-
-      // ── Catalog ───────────────────────────────────────────────────────────
-      publishSingle: (artistId, input) => {
-        const song: Song = {
-          id: uid("sg"),
-          title: input.title,
-          artistIds: [artistId, ...(input.collaboratorIds ?? [])],
-          coverSeed: uid("cover"),
-          durationSec: input.durationSec,
-          genre: input.genre,
-          releaseDate: input.releaseDate,
-          lyrics: input.lyrics,
-          streamCount: 0,
-          listenerCount: 0,
-          earlyAccess: false,
-        };
-        set((s) => ({ songs: [song, ...s.songs] }));
-        get().notifyFollowersOfRelease(artistId, song.title, `/library`);
-        return song;
-      },
-
-      publishAlbum: (artistId, input) => {
-        const albumId = uid("al");
-        const artistIds = [artistId, ...(input.collaboratorIds ?? [])];
-        const tracks: Song[] = input.tracks.map((t) => ({
-          id: uid("sg"),
-          title: t.title,
-          artistIds,
-          albumId,
-          coverSeed: albumId,
-          durationSec: t.durationSec,
-          genre: input.genre,
-          releaseDate: input.releaseDate,
-          lyrics: t.lyrics,
-          streamCount: 0,
-          listenerCount: 0,
-          earlyAccess: false,
-        }));
-        const album: Album = {
-          id: albumId,
-          title: input.title,
-          artistIds,
-          coverSeed: albumId,
-          releaseDate: input.releaseDate,
-          genre: input.genre,
-          type: "album",
-          songIds: tracks.map((t) => t.id),
-          streamCount: 0,
-          listenerCount: 0,
-          earlyAccess: false,
-        };
-        set((s) => ({ albums: [album, ...s.albums], songs: [...tracks, ...s.songs] }));
-        get().notifyFollowersOfRelease(artistId, input.title, `/album/${albumId}`);
-        return album;
-      },
-
-      updateSong: (songId, patch) =>
-        set((s) => ({
-          songs: s.songs.map((song) => (song.id === songId ? { ...song, ...patch } : song)),
-        })),
-
-      updateAlbum: (albumId, patch) =>
-        set((s) => ({
-          albums: s.albums.map((album) =>
-            album.id === albumId ? { ...album, ...patch } : album,
-          ),
-        })),
-
-      deleteSong: (songId) =>
-        set((s) => ({
-          songs: s.songs.filter((song) => song.id !== songId),
-          albums: s.albums.map((a) => ({
-            ...a,
-            songIds: a.songIds.filter((id) => id !== songId),
-          })),
-          playlists: s.playlists.map((p) => ({
-            ...p,
-            songIds: p.songIds.filter((id) => id !== songId),
-          })),
-        })),
-
-      deleteAlbum: (albumId) =>
-        set((s) => {
-          const removedSongIds = new Set(
-            s.songs.filter((song) => song.albumId === albumId).map((song) => song.id),
-          );
-          return {
-            albums: s.albums.filter((a) => a.id !== albumId),
-            songs: s.songs.filter((song) => song.albumId !== albumId),
-            playlists: s.playlists.map((p) => ({
-              ...p,
-              songIds: p.songIds.filter((id) => !removedSongIds.has(id)),
-            })),
-          };
-        }),
-
-      // ── Playlists ─────────────────────────────────────────────────────────
-      createPlaylist: (ownerId, name) => {
-        const owner = get().users.find((u) => u.id === ownerId);
-        if (!owner) return null;
-        const owned = get().playlists.filter((p) => p.ownerId === ownerId);
-        const limit = TIERS[owner.subscriptionTier].playlistLimit;
-        if (owned.length >= limit) return null; // caller surfaces the limit message
-        const playlist: Playlist = {
-          id: uid("pl"),
-          ownerId,
-          name,
-          coverSeed: uid("cover"),
-          songIds: [],
-          createdAt: nowIso(),
-        };
-        set((s) => ({ playlists: [...s.playlists, playlist] }));
-        return playlist;
-      },
-
-      renamePlaylist: (playlistId, name) =>
-        set((s) => ({
-          playlists: s.playlists.map((p) => (p.id === playlistId ? { ...p, name } : p)),
-        })),
-
-      deletePlaylist: (playlistId) =>
-        set((s) => ({ playlists: s.playlists.filter((p) => p.id !== playlistId) })),
-
-      toggleSongInPlaylist: (playlistId, songId) =>
-        set((s) => ({
-          playlists: s.playlists.map((p) => {
-            if (p.id !== playlistId) return p;
-            const has = p.songIds.includes(songId);
-            return {
-              ...p,
-              songIds: has ? p.songIds.filter((id) => id !== songId) : [...p.songIds, songId],
-            };
-          }),
-        })),
-
-      // ── Notifications ─────────────────────────────────────────────────────
-      addNotification: (notification) =>
-        set((s) => ({
-          notifications: [
-            { ...notification, id: uid("nt"), createdAt: nowIso(), read: notification.read ?? false },
-            ...s.notifications,
-          ],
-        })),
-
-      markNotificationRead: (notificationId) =>
-        set((s) => ({
-          notifications: s.notifications.map((n) =>
-            n.id === notificationId ? { ...n, read: true } : n,
-          ),
-        })),
-
-      markAllNotificationsRead: (userId) =>
-        set((s) => ({
-          notifications: s.notifications.map((n) =>
-            n.userId === userId ? { ...n, read: true } : n,
-          ),
-        })),
-
-      deleteNotification: (notificationId) =>
-        set((s) => ({
-          notifications: s.notifications.filter((n) => n.id !== notificationId),
-        })),
-
-      // ── Tickets ───────────────────────────────────────────────────────────
-      replyToTicket: (ticketId, body, authorName) =>
-        set((s) => ({
-          tickets: s.tickets.map((t) =>
-            t.id === ticketId
-              ? {
-                  ...t,
-                  status: "answered",
-                  messages: [
-                    ...t.messages,
-                    {
-                      id: uid("tm"),
-                      authorRole: "support",
-                      authorName,
-                      body,
-                      createdAt: nowIso(),
-                    },
-                  ],
-                }
-              : t,
-          ),
-        })),
-
-      setTicketStatus: (ticketId, status) =>
-        set((s) => ({
-          tickets: s.tickets.map((t) => (t.id === ticketId ? { ...t, status } : t)),
-        })),
-
-      // ── Audit / payouts ───────────────────────────────────────────────────
-      settlePayout: (auditId) =>
-        set((s) => ({
-          audits: s.audits.map((a) => (a.id === auditId ? { ...a, status: "settled" } : a)),
-        })),
-
-      // ── Settings ──────────────────────────────────────────────────────────
-      updatePrices: (prices) => set(() => ({ settings: { prices } })),
-
-      // Internal helper (not part of the public action surface).
-      notifyFollowersOfRelease(artistId: string, title: string, href: string) {
-        const followers = get().users.filter((u) => u.followingIds.includes(artistId));
-        if (followers.length === 0) return;
-        const artist = get().artists.find((a) => a.id === artistId);
-        const created: AppNotification[] = followers.map((u) => ({
-          id: uid("nt"),
-          userId: u.id,
-          kind: "new_release",
-          title: `اثر جدید از ${artist?.name ?? "هنرمند"}`,
-          body: `«${title}» منتشر شد.`,
-          createdAt: nowIso(),
-          read: false,
-          href,
-        }));
-        set((s) => ({ notifications: [...created, ...s.notifications] }));
-      },
-    }),
-    {
-      name: "nava-db",
-      version: 1,
-      // Persist only the data; actions are re-created from code on every load.
-      partialize: (s): NavaDatabase => ({
-        users: s.users,
-        artists: s.artists,
-        songs: s.songs,
-        albums: s.albums,
-        playlists: s.playlists,
-        notifications: s.notifications,
-        tickets: s.tickets,
-        audits: s.audits,
-        settings: s.settings,
       }),
-    },
-  ),
-);
+      artists: s.artists.map((a) => {
+        if (a.id !== targetId) return a;
+        const wasFollowing = s.users
+          .find((u) => u.id === userId)
+          ?.followingIds.includes(targetId);
+        return { ...a, followerCount: a.followerCount + (wasFollowing ? -1 : 1) };
+      }),
+    }));
+    bg(api.post("/auth/me/toggle-follow/", { artistId: targetId }));
+  },
+
+  setSubscription: (userId, tier) =>
+    // The real purchase happens through the subscription/checkout flow; this
+    // keeps the optimistic local reflection for immediate UI feedback.
+    set((s) => ({
+      users: s.users.map((u) =>
+        u.id === userId
+          ? {
+              ...u,
+              subscriptionTier: tier,
+              subscriptionRenewsAt:
+                tier === "basic"
+                  ? undefined
+                  : new Date(Date.now() + 30 * 864e5).toISOString(),
+            }
+          : u,
+      ),
+    })),
+
+  incrementDailyStreams: (userId) =>
+    // The play endpoint records the stream server-side; this bumps the local
+    // counter so the "remaining" UI updates instantly.
+    set((s) => ({
+      users: s.users.map((u) =>
+        u.id === userId ? { ...u, dailyStreams: u.dailyStreams + 1 } : u,
+      ),
+    })),
+
+  // ── Artist verification ────────────────────────────────────────────────
+  approveArtist: (artistId) => {
+    set((s) => ({
+      artists: s.artists.map((a) =>
+        a.id === artistId
+          ? { ...a, status: "approved", verified: true, rejectionReason: undefined }
+          : a,
+      ),
+    }));
+    bg(api.post(`/artists/${artistId}/approve/`));
+  },
+
+  rejectArtist: (artistId, reason) => {
+    set((s) => ({
+      artists: s.artists.map((a) =>
+        a.id === artistId
+          ? { ...a, status: "rejected", verified: false, rejectionReason: reason }
+          : a,
+      ),
+    }));
+    bg(api.post(`/artists/${artistId}/reject/`, { reason }));
+  },
+
+  // ── Catalog ──────────────────────────────────────────────────────────────
+  publishSingle: async (_artistId, input) => {
+    const payload = {
+      title: input.title,
+      genre: input.genre,
+      durationSec: input.durationSec,
+      releaseDate: input.releaseDate,
+      lyrics: input.lyrics ?? "",
+      collaboratorIds: input.collaboratorIds ?? [],
+      audio: input.audio,
+      cover: input.cover,
+    };
+    try {
+      // Multipart only when the artist actually attached a file.
+      const song = input.audio || input.cover
+        ? await api.postForm<Song>("/songs/", toFormData(payload))
+        : await api.post<Song>("/songs/", payload);
+      set((s) => ({ songs: [song, ...s.songs] }));
+      return song;
+    } catch (error) {
+      console.error("[nava publishSingle]", error);
+      toast.error(tr("انتشار تک‌آهنگ ناموفق بود"));
+      return null;
+    }
+  },
+
+  publishAlbum: async (_artistId, input) => {
+    // The JSON `tracks` field carries metadata only — a file cannot be nested
+    // inside it, so each track's audio and artwork go up as their own
+    // `track_audio_<i>` / `track_cover_<i>` fields and the server pairs them
+    // back by position.
+    const tracks = input.tracks.map((t) => ({
+      title: t.title,
+      durationSec: t.durationSec,
+      lyrics: t.lyrics ?? "",
+    }));
+    const trackFiles: Record<string, File> = {};
+    input.tracks.forEach((track, i) => {
+      if (track.audio) trackFiles[`track_audio_${i}`] = track.audio;
+      if (track.cover) trackFiles[`track_cover_${i}`] = track.cover;
+    });
+
+    const payload = {
+      title: input.title,
+      genre: input.genre,
+      releaseDate: input.releaseDate,
+      collaboratorIds: input.collaboratorIds ?? [],
+      tracks,
+    };
+    const hasFiles = Boolean(input.cover) || Object.keys(trackFiles).length > 0;
+
+    try {
+      const album = hasFiles
+        ? await api.postForm<Album>(
+            "/albums/",
+            toFormData({ ...payload, cover: input.cover, ...trackFiles }),
+          )
+        : await api.post<Album>("/albums/", payload);
+      set((s) => ({ albums: [album, ...s.albums] }));
+      bg(get().hydrate(get().users.find(Boolean)!)); // refresh songs list
+      return album;
+    } catch (error) {
+      console.error("[nava publishAlbum]", error);
+      toast.error(tr("انتشار آلبوم ناموفق بود"));
+      return null;
+    }
+  },
+
+  updateSong: (songId, patch) => {
+    set((s) => ({
+      songs: s.songs.map((song) => (song.id === songId ? { ...song, ...patch } : song)),
+    }));
+    const body: Record<string, unknown> = {};
+    if (patch.title !== undefined) body.title = patch.title;
+    if (patch.lyrics !== undefined) body.lyrics = patch.lyrics;
+    if (Object.keys(body).length) bg(api.patch(`/songs/${songId}/`, body));
+  },
+
+  updateAlbum: (albumId, patch) => {
+    set((s) => ({
+      albums: s.albums.map((album) => (album.id === albumId ? { ...album, ...patch } : album)),
+    }));
+    if (patch.title !== undefined) bg(api.patch(`/albums/${albumId}/`, { title: patch.title }));
+  },
+
+  deleteSong: (songId) => {
+    set((s) => ({
+      songs: s.songs.filter((song) => song.id !== songId),
+      albums: s.albums.map((a) => ({ ...a, songIds: a.songIds.filter((id) => id !== songId) })),
+      playlists: s.playlists.map((p) => ({ ...p, songIds: p.songIds.filter((id) => id !== songId) })),
+    }));
+    bg(api.del(`/songs/${songId}/`));
+  },
+
+  deleteAlbum: (albumId) => {
+    const removed = new Set(
+      get().songs.filter((song) => song.albumId === albumId).map((song) => song.id),
+    );
+    set((s) => ({
+      albums: s.albums.filter((a) => a.id !== albumId),
+      songs: s.songs.filter((song) => song.albumId !== albumId),
+      playlists: s.playlists.map((p) => ({
+        ...p,
+        songIds: p.songIds.filter((id) => !removed.has(id)),
+      })),
+    }));
+    bg(api.del(`/albums/${albumId}/`));
+  },
+
+  // ── Playlists ──────────────────────────────────────────────────────────
+  createPlaylist: async (_ownerId, name) => {
+    try {
+      const playlist = await api.post<Playlist>("/playlists/", { name });
+      set((s) => ({ playlists: [...s.playlists, playlist] }));
+      return playlist;
+    } catch (error) {
+      console.error("[nava createPlaylist]", error);
+      return null; // caller surfaces the tier-limit message
+    }
+  },
+
+  renamePlaylist: (playlistId, name) => {
+    set((s) => ({
+      playlists: s.playlists.map((p) => (p.id === playlistId ? { ...p, name } : p)),
+    }));
+    bg(api.patch(`/playlists/${playlistId}/`, { name }));
+  },
+
+  deletePlaylist: (playlistId) => {
+    set((s) => ({ playlists: s.playlists.filter((p) => p.id !== playlistId) }));
+    bg(api.del(`/playlists/${playlistId}/`));
+  },
+
+  toggleSongInPlaylist: (playlistId, songId) => {
+    const playlist = get().playlists.find((p) => p.id === playlistId);
+    const has = playlist?.songIds.includes(songId) ?? false;
+    set((s) => ({
+      playlists: s.playlists.map((p) => {
+        if (p.id !== playlistId) return p;
+        return {
+          ...p,
+          songIds: has ? p.songIds.filter((id) => id !== songId) : [...p.songIds, songId],
+        };
+      }),
+    }));
+    const path = `/playlists/${playlistId}/${has ? "remove-song" : "add-song"}/`;
+    bg(api.post(path, { songId }));
+  },
+
+  // ── Notifications ────────────────────────────────────────────────────────
+  markNotificationRead: (notificationId) => {
+    set((s) => ({
+      notifications: s.notifications.map((n) =>
+        n.id === notificationId ? { ...n, read: true } : n,
+      ),
+    }));
+    bg(api.post(`/notifications/${notificationId}/mark-read/`));
+  },
+
+  markAllNotificationsRead: (userId) => {
+    set((s) => ({
+      notifications: s.notifications.map((n) =>
+        n.userId === userId ? { ...n, read: true } : n,
+      ),
+    }));
+    bg(api.post("/notifications/mark-all-read/"));
+  },
+
+  deleteNotification: (notificationId) => {
+    set((s) => ({
+      notifications: s.notifications.filter((n) => n.id !== notificationId),
+    }));
+    bg(api.del(`/notifications/${notificationId}/`));
+  },
+
+  // ── Tickets ────────────────────────────────────────────────────────────
+  replyToTicket: (ticketId, body, authorName) => {
+    set((s) => ({
+      tickets: s.tickets.map((t) =>
+        t.id === ticketId
+          ? {
+              ...t,
+              status: "answered",
+              messages: [
+                ...t.messages,
+                {
+                  id: `tm_${Math.random().toString(36).slice(2, 8)}`,
+                  authorRole: "support",
+                  authorName,
+                  body,
+                  createdAt: new Date().toISOString(),
+                },
+              ],
+            }
+          : t,
+      ),
+    }));
+    bg(api.post(`/tickets/${ticketId}/reply/`, { body }));
+  },
+
+  setTicketStatus: (ticketId, status) => {
+    set((s) => ({
+      tickets: s.tickets.map((t) => (t.id === ticketId ? { ...t, status } : t)),
+    }));
+    bg(api.post(`/tickets/${ticketId}/set-status/`, { status }));
+  },
+
+  // ── Audit / payouts ──────────────────────────────────────────────────────
+  settlePayout: (auditId) => {
+    set((s) => ({
+      audits: s.audits.map((a) => (a.id === auditId ? { ...a, status: "settled" } : a)),
+    }));
+    bg(api.post(`/dashboard/audits/${auditId}/settle/`));
+  },
+
+  // ── Settings ─────────────────────────────────────────────────────────────
+  updatePrices: (prices) => {
+    set(() => ({ settings: { prices } }));
+    bg(api.patch("/platform-settings/", { silverPrice: prices.silver, goldPrice: prices.gold }));
+  },
+}));

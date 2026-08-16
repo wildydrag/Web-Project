@@ -4,12 +4,14 @@ import { Sparkles } from "lucide-react";
 
 import { AlbumCard } from "@/components/catalog/album-card";
 import { MediaGrid } from "@/components/catalog/media-grid";
+import { RecommendationsSection } from "@/components/catalog/recommendations-section";
 import { PlaylistCard } from "@/components/catalog/playlist-card";
 import { SongCard } from "@/components/catalog/song-card";
 import { SectionHeader } from "@/components/section-header";
 import { getUserPlaylists, isVisibleToUser } from "@/lib/data/selectors";
 import { useDb } from "@/lib/stores/db-store";
 import { useCurrentUser } from "@/lib/stores/session-store";
+import { useT } from "@/lib/i18n";
 
 function greeting(): string {
   const hour = new Date().getHours();
@@ -20,6 +22,7 @@ function greeting(): string {
 }
 
 export default function HomePage() {
+  const t = useT();
   const user = useCurrentUser();
   const albums = useDb((s) => s.albums);
   const songs = useDb((s) => s.songs);
@@ -49,7 +52,7 @@ export default function HomePage() {
   return (
     <div className="space-y-9">
       <header>
-        <p className="text-sm text-muted-foreground">{greeting()}</p>
+        <p className="text-sm text-muted-foreground">{t(greeting())}</p>
         <h1 className="font-heading text-2xl font-bold">{user.displayName}</h1>
       </header>
 
@@ -57,8 +60,8 @@ export default function HomePage() {
       {isGold && (earlyAlbums.length > 0 || earlySingles.length > 0) ? (
         <section className="rounded-2xl border border-gold/25 bg-gold/5 p-4">
           <SectionHeader
-            title="دسترسی زودهنگام"
-            description="آثار تازه، زودتر از همه برای اعضای طلایی."
+            title={t("دسترسی زودهنگام")}
+            description={t("آثار تازه، زودتر از همه برای اعضای طلایی.")}
           />
           <MediaGrid>
             {earlyAlbums.map((album) => (
@@ -74,7 +77,7 @@ export default function HomePage() {
       {myPlaylists.length > 0 ? (
         <section>
           <SectionHeader
-            title="پلی‌لیست‌های اخیر"
+            title={t("پلی‌لیست‌های اخیر")}
             seeAllHref="/playlists"
           />
           <MediaGrid>
@@ -87,8 +90,8 @@ export default function HomePage() {
 
       <section>
         <SectionHeader
-          title="تازه‌ترین آلبوم‌ها"
-          description="جدیدترین آثار منتشرشده در نوا"
+          title={t("تازه‌ترین آلبوم‌ها")}
+          description={t("جدیدترین آثار منتشرشده در نوا")}
           seeAllHref="/library"
         />
         <MediaGrid>
@@ -98,8 +101,10 @@ export default function HomePage() {
         </MediaGrid>
       </section>
 
+      <RecommendationsSection />
+
       <section>
-        <SectionHeader title="پرشنونده‌ها" description="آهنگ‌هایی که این روزها زیاد شنیده می‌شوند" />
+        <SectionHeader title={t("پرشنونده‌ها")} description={t("آهنگ‌هایی که این روزها زیاد شنیده می‌شوند")} />
         <MediaGrid>
           {topSongs.map((song) => (
             <SongCard key={song.id} song={song} context={topSongIds} />
@@ -112,9 +117,9 @@ export default function HomePage() {
           <div className="flex items-center gap-3">
             <Sparkles className="size-5 text-gold" />
             <div>
-              <p className="font-medium">دسترسی زودهنگام و استریم نامحدود می‌خواهید؟</p>
+              <p className="font-medium">{t("دسترسی زودهنگام و استریم نامحدود می‌خواهید؟")}</p>
               <p className="text-sm text-muted-foreground">
-                با اشتراک طلایی، آثار جدید را زودتر بشنوید.
+                {t("با اشتراک طلایی، آثار جدید را زودتر بشنوید.")}
               </p>
             </div>
           </div>

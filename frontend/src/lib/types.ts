@@ -65,6 +65,8 @@ export interface User {
   subscriptionTier: SubscriptionTier;
   /** When the current paid subscription ends (undefined for basic). */
   subscriptionRenewsAt?: string;
+  /** False once a paid plan has lapsed; `subscriptionTier` then reads `basic`. */
+  subscriptionIsActive?: boolean;
   /** Ids of users/artists this account follows. */
   followingIds: string[];
   followerCount: number;
@@ -113,6 +115,10 @@ export interface Song {
   /** Set when the track is part of an album; undefined for a single. */
   albumId?: string;
   coverSeed: string;
+  /** Absolute URL to the uploaded cover image, when the artist attached one. */
+  coverUrl?: string | null;
+  /** Absolute URL to the uploaded audio file, when the artist attached one. */
+  audioUrl?: string | null;
   durationSec: number;
   genre: string;
   releaseDate: string;
@@ -121,6 +127,9 @@ export interface Song {
   listenerCount: number;
   /** Gold-tier early access before public release. */
   earlyAccess: boolean;
+  /** Earnings in Toman, computed by the backend. Present only for the
+   *  credited artist and staff. */
+  revenueToman?: number;
 }
 
 export interface Album {
@@ -128,6 +137,8 @@ export interface Album {
   title: string;
   artistIds: string[];
   coverSeed: string;
+  /** Absolute URL to the uploaded cover image, when the artist attached one. */
+  coverUrl?: string | null;
   releaseDate: string;
   genre: string;
   type: ReleaseType;
@@ -135,13 +146,16 @@ export interface Album {
   streamCount: number;
   listenerCount: number;
   earlyAccess: boolean;
+  /** Earnings in Toman, computed by the backend (artist/staff only). */
+  revenueToman?: number;
 }
-
 export interface Playlist {
   id: string;
   ownerId: string;
   name: string;
   coverSeed: string;
+  /** Absolute URL to an uploaded cover image, when one is set. */
+  coverUrl?: string | null;
   songIds: string[];
   createdAt: string;
 }
@@ -174,6 +188,8 @@ export interface Ticket {
   id: string; // human-readable, e.g. TK-1042
   userId: string;
   userName: string;
+  /** Reporter's email, joined by the backend for the support table. */
+  userEmail?: string;
   subject: string;
   status: TicketStatus;
   createdAt: string;

@@ -9,9 +9,11 @@ import { usePlayback } from "@/lib/hooks/use-playback";
 import { useDb } from "@/lib/stores/db-store";
 import { currentSongId, usePlayer } from "@/lib/stores/player-store";
 import type { Song } from "@/lib/types";
+import { useT } from "@/lib/i18n";
 
 /** Grid card for a single/track. Clicking the cover or title plays it. */
 export function SongCard({ song, context }: { song: Song; context?: string[] }) {
+  const t = useT();
   const artists = useDb((s) => s.artists);
   const { playSong } = usePlayback();
   const isCurrent = usePlayer(currentSongId) === song.id;
@@ -30,8 +32,8 @@ export function SongCard({ song, context }: { song: Song; context?: string[] }) 
   return (
     <div className="group rounded-xl p-2 transition-colors hover:bg-accent/50">
       <div className="relative mb-2">
-        <button onClick={play} className="block w-full" aria-label={`پخش ${song.title}`}>
-          <CoverArt seed={song.coverSeed} label={song.title} rounded="rounded-lg" />
+        <button onClick={play} className="block w-full" aria-label={t("پخش {title}", { title: song.title })}>
+         <CoverArt seed={song.coverSeed} url={song.coverUrl} label={song.title} rounded="rounded-lg" /> 
         </button>
         <CardPlayButton onClick={play} playing={isCurrent && isPlaying} />
       </div>

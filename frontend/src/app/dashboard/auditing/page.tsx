@@ -17,8 +17,10 @@ import { formatNumber, formatToman, toFaDigits } from "@/lib/format";
 import { PAYOUT_STATUS } from "@/lib/status-labels";
 import { useDb } from "@/lib/stores/db-store";
 import { useCurrentUser } from "@/lib/stores/session-store";
+import { useT } from "@/lib/i18n";
 
 export default function AuditingPage() {
+  const t = useT();
   const user = useCurrentUser();
   const audits = useDb((s) => s.audits);
   const settlePayout = useDb((s) => s.settlePayout);
@@ -28,8 +30,8 @@ export default function AuditingPage() {
     return (
       <EmptyState
         icon={Lock}
-        title="دسترسی محدود"
-        description="این بخش تنها برای مدیر سامانه در دسترس است."
+        title={t("دسترسی محدود")}
+        description={t("این بخش تنها برای مدیر سامانه در دسترس است.")}
       />
     );
   }
@@ -37,9 +39,9 @@ export default function AuditingPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-heading text-2xl font-bold">حسابرسی ماهانه</h1>
+        <h1 className="font-heading text-2xl font-bold">{t("حسابرسی ماهانه")}</h1>
         <p className="text-sm text-muted-foreground">
-          پاداش و وضعیت تسویه‌حساب هنرمندان.
+          {t("پاداش و وضعیت تسویه‌حساب هنرمندان.")}
         </p>
       </div>
 
@@ -47,12 +49,12 @@ export default function AuditingPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>هنرمند</TableHead>
-              <TableHead className="hidden sm:table-cell">شنوندگان یکتا</TableHead>
-              <TableHead className="hidden sm:table-cell">استریم‌ها</TableHead>
-              <TableHead>پاداش</TableHead>
-              <TableHead>وضعیت</TableHead>
-              <TableHead className="text-end">عملیات</TableHead>
+              <TableHead>{t("هنرمند")}</TableHead>
+              <TableHead className="hidden sm:table-cell">{t("شنوندگان یکتا")}</TableHead>
+              <TableHead className="hidden sm:table-cell">{t("استریم‌ها")}</TableHead>
+              <TableHead>{t("پاداش")}</TableHead>
+              <TableHead>{t("وضعیت")}</TableHead>
+              <TableHead className="text-end">{t("عملیات")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -76,15 +78,15 @@ export default function AuditingPage() {
                     {formatToman(row.rewardToman)}
                   </TableCell>
                   <TableCell>
-                    <StatusPill label={status.label} tone={status.tone} />
+                    <StatusPill label={t(status.label)} tone={status.tone} />
                   </TableCell>
                   <TableCell className="text-end">
                     {row.status === "pending" ? (
                       <Button size="sm" onClick={() => settlePayout(row.id)}>
-                        تایید تسویه
+                        {t("تایید تسویه")}
                       </Button>
                     ) : (
-                      <span className="text-xs text-muted-foreground">تسویه‌شده</span>
+                      <span className="text-xs text-muted-foreground">{t("تسویه‌شده")}</span>
                     )}
                   </TableCell>
                 </TableRow>
@@ -95,8 +97,8 @@ export default function AuditingPage() {
       </div>
 
       <p className="text-xs text-muted-foreground">
-        مبالغ پاداش در فاز اول تخمینی‌اند؛ در فاز دوم بر اساس فرمول اصلی محاسبه می‌شوند.
-        دوره: {toFaDigits(audits[0]?.period ?? "—")}
+        {t("پاداش هنرمندان بر اساس استریم‌های ثبت‌شده در همان دوره محاسبه می‌شود.")}
+        {t("دوره: {period}", { period: toFaDigits(audits[0]?.period ?? "—") })}
       </p>
     </div>
   );

@@ -23,6 +23,7 @@ import { useDb } from "@/lib/stores/db-store";
 import { useCurrentUser } from "@/lib/stores/session-store";
 import type { AppNotification, NotificationKind } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 const KIND_ICON: Record<NotificationKind, LucideIcon> = {
   subscription_expiring: Clock,
@@ -34,6 +35,7 @@ const KIND_ICON: Record<NotificationKind, LucideIcon> = {
 };
 
 function NotificationCard({ notification }: { notification: AppNotification }) {
+  const t = useT();
   const markRead = useDb((s) => s.markNotificationRead);
   const remove = useDb((s) => s.deleteNotification);
   const Icon = KIND_ICON[notification.kind];
@@ -69,7 +71,7 @@ function NotificationCard({ notification }: { notification: AppNotification }) {
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           {!notification.read ? (
-            <span className="size-2 shrink-0 rounded-full bg-primary" aria-label="خوانده‌نشده" />
+            <span className="size-2 shrink-0 rounded-full bg-primary" aria-label={t("خوانده‌نشده")} />
           ) : null}
           {Title}
         </div>
@@ -84,7 +86,7 @@ function NotificationCard({ notification }: { notification: AppNotification }) {
           <Button
             variant="ghost"
             size="icon-sm"
-            aria-label="علامت‌گذاری به‌عنوان خوانده‌شده"
+            aria-label={t("علامت‌گذاری به‌عنوان خوانده‌شده")}
             onClick={() => markRead(notification.id)}
           >
             <Check />
@@ -93,7 +95,7 @@ function NotificationCard({ notification }: { notification: AppNotification }) {
         <Button
           variant="ghost"
           size="icon-sm"
-          aria-label="حذف اعلان"
+          aria-label={t("حذف اعلان")}
           onClick={() => remove(notification.id)}
         >
           <Trash2 />
@@ -104,6 +106,7 @@ function NotificationCard({ notification }: { notification: AppNotification }) {
 }
 
 export default function NotificationsPage() {
+  const t = useT();
   const user = useCurrentUser();
   const notifications = useDb((s) => s.notifications);
   const markAllRead = useDb((s) => s.markAllNotificationsRead);
@@ -115,7 +118,7 @@ export default function NotificationsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
-        <h1 className="font-heading text-2xl font-bold">اعلانات</h1>
+        <h1 className="font-heading text-2xl font-bold">{t("اعلانات")}</h1>
         {mine.length > 0 ? (
           <Button
             variant="outline"
@@ -124,7 +127,7 @@ export default function NotificationsPage() {
             onClick={() => markAllRead(user.id)}
           >
             <CheckCheck />
-            خواندن همه
+            {t("خواندن همه")}
           </Button>
         ) : null}
       </div>
@@ -132,8 +135,8 @@ export default function NotificationsPage() {
       {mine.length === 0 ? (
         <EmptyState
           icon={Bell}
-          title="اعلان جدیدی ندارید"
-          description="هر زمان اتفاق تازه‌ای بیفتد، اینجا به شما اطلاع می‌دهیم."
+          title={t("اعلان جدیدی ندارید")}
+          description={t("هر زمان اتفاق تازه‌ای بیفتد، اینجا به شما اطلاع می‌دهیم.")}
         />
       ) : (
         <div className="space-y-2">

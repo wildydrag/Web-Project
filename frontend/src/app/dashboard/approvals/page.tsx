@@ -13,50 +13,57 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { byId, getPendingArtists } from "@/lib/data/selectors";
 import { formatShortDate } from "@/lib/format";
-import { useDb } from "@/lib/stores/db-store";
+import { useApiResource } from "@/lib/api/hooks";
+import { useT } from "@/lib/i18n";
+
+/** Pending applicants, already joined to the applicant's email by the backend. */
+interface PendingApplication {
+  id: string;
+  name: string;
+  email: string;
+  requestedAt: string;
+  portfolio: string;
+}
 
 export default function ApprovalsPage() {
-  const artists = useDb((s) => s.artists);
-  const users = useDb((s) => s.users);
-
-  const pending = getPendingArtists(artists);
+  const t = useT();
+  const { data } = useApiResource<PendingApplication[]>("/dashboard/approvals/");
+  const pending = data ?? [];
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-heading text-2xl font-bold">احراز هویت هنرمندان</h1>
+        <h1 className="font-heading text-2xl font-bold">{t("احراز هویت هنرمندان")}</h1>
         <p className="text-sm text-muted-foreground">
-          درخواست‌های در انتظار تایید را بررسی کنید.
+          {t("درخواست‌های در انتظار تایید را بررسی کنید.")}
         </p>
       </div>
 
       {pending.length === 0 ? (
         <EmptyState
           icon={UserCheck}
-          title="درخواستی در انتظار نیست"
-          description="همه‌ی درخواست‌های احراز هویت بررسی شده‌اند."
+          title={t("درخواستی در انتظار نیست")}
+          description={t("همه‌ی درخواست‌های احراز هویت بررسی شده‌اند.")}
         />
       ) : (
         <div className="rounded-xl border">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>نام هنری</TableHead>
-                <TableHead className="hidden sm:table-cell">ایمیل</TableHead>
-                <TableHead className="hidden md:table-cell">تاریخ درخواست</TableHead>
-                <TableHead className="text-end">عملیات</TableHead>
+                <TableHead>{t("نام هنری")}</TableHead>
+                <TableHead className="hidden sm:table-cell">{t("ایمیل")}</TableHead>
+                <TableHead className="hidden md:table-cell">{t("تاریخ درخواست")}</TableHead>
+                <TableHead className="text-end">{t("عملیات")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {pending.map((artist) => {
-                const email = byId(users, artist.userId)?.email ?? "—";
                 return (
                   <TableRow key={artist.id}>
                     <TableCell className="font-medium">{artist.name}</TableCell>
                     <TableCell className="hidden text-muted-foreground sm:table-cell" dir="ltr">
-                      {email}
+                      {artist.email}
                     </TableCell>
                     <TableCell className="hidden text-muted-foreground md:table-cell">
                       {formatShortDate(artist.requestedAt)}
@@ -67,7 +74,7 @@ export default function ApprovalsPage() {
                         size="sm"
                         render={<Link href={`/dashboard/approvals/${artist.id}`} />}
                       >
-                        مشاهده نمونه‌کارها
+                        {t("مشاهده نمونه‌کارها")}
                       </Button>
                     </TableCell>
                   </TableRow>

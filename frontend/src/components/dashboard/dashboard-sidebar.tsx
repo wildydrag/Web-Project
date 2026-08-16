@@ -14,8 +14,10 @@ import {
 } from "@/components/ui/sheet";
 import { dashboardNavForRole } from "@/lib/dashboard-nav";
 import { useCurrentUser } from "@/lib/stores/session-store";
+import { useEdges, useT } from "@/lib/i18n";
 
 function DashboardSidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+  const t = useT();
   const user = useCurrentUser();
   if (!user) return null;
 
@@ -23,7 +25,7 @@ function DashboardSidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     <div className="flex h-full flex-col gap-6 p-4">
       <div className="px-1">
         <Brand />
-        <p className="mt-1 text-xs text-muted-foreground">پنل مدیریت</p>
+        <p className="mt-1 text-xs text-muted-foreground">{t("پنل مدیریت")}</p>
       </div>
       <NavLinks items={dashboardNavForRole(user.role)} onNavigate={onNavigate} />
     </div>
@@ -41,15 +43,17 @@ export function DashboardSidebar() {
 
 /** Hamburger + drawer for the dashboard on mobile. */
 export function DashboardMobileSidebar() {
+  const edges = useEdges();
+  const t = useT();
   const [open, setOpen] = useState(false);
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger render={<Button variant="ghost" size="icon" className="md:hidden" />}>
         <Menu />
-        <span className="sr-only">باز کردن منو</span>
+        <span className="sr-only">{t("باز کردن منو")}</span>
       </SheetTrigger>
-      <SheetContent side="right" className="w-72 bg-sidebar p-0">
-        <SheetTitle className="sr-only">منوی پنل مدیریت</SheetTitle>
+      <SheetContent side={edges.start} className="w-72 bg-sidebar p-0">
+        <SheetTitle className="sr-only">{t("منوی پنل مدیریت")}</SheetTitle>
         <DashboardSidebarContent onNavigate={() => setOpen(false)} />
       </SheetContent>
     </Sheet>

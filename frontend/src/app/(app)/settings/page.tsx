@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import { Check, Crown, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+import {
+  SubscriptionCheckoutDialog,
+  usePaymentCallback,
+} from "@/components/subscription-checkout-dialog";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { TierBadge } from "@/components/tier-badge";
 import { Button } from "@/components/ui/button";
@@ -30,6 +34,7 @@ import { Switch } from "@/components/ui/switch";
 import { TIERS, TIER_ORDER, UNLIMITED } from "@/lib/config";
 import { formatToman, toFaDigits } from "@/lib/format";
 import { useDb } from "@/lib/stores/db-store";
+import { tr, useLanguageStore, useT } from "@/lib/i18n";
 import { usePlayer } from "@/lib/stores/player-store";
 import { useCurrentUser } from "@/lib/stores/session-store";
 import { useSession } from "@/lib/stores/session-store";
@@ -75,21 +80,27 @@ function SectionCard({
 }
 
 function tierPrice(tier: SubscriptionTier, prices: { silver: number; gold: number }) {
-  if (tier === "basic") return "رایگان";
-  return `${formatToman(prices[tier])} / ماه`;
+  if (tier === "basic") return tr("رایگان");
+  return tr("{price} / ماه", { price: formatToman(prices[tier]) });
 }
 
 export default function SettingsPage() {
+  const t = useT();
   const user = useCurrentUser();
   const prices = useDb((s) => s.settings.prices);
   const updateUser = useDb((s) => s.updateUser);
-  const setSubscription = useDb((s) => s.setSubscription);
+  const setLanguage = useLanguageStore((s) => s.setLanguage);
   const deleteUser = useDb((s) => s.deleteUser);
   const logout = useSession((s) => s.logout);
   const volume = usePlayer((s) => s.volume);
   const setVolume = usePlayer((s) => s.setVolume);
   const router = useRouter();
   const [deleteOpen, setDeleteOpen] = useState(false);
+  // Tier the user is buying; opens the checkout dialog when set.
+  const [checkoutTier, setCheckoutTier] = useState<SubscriptionTier | null>(null);
+
+  // Finish a payment when the gateway redirects back to this page.
+  usePaymentCallback();
 
   if (!user) return null;
 
@@ -98,10 +109,15 @@ export default function SettingsPage() {
   }
 
   function chooseTier(tier: SubscriptionTier) {
-    setSubscription(user!.id, tier);
-    toast.success(`اشتراک به ${TIERS[tier].label} تغییر کرد`, {
-      description: "در فاز دوم، این مرحله به درگاه پرداخت متصل می‌شود.",
-    });
+    if (tier === user!.subscriptionTier) return;
+    if (tier === "basic") {
+      // Downgrades are not a purchase: the paid plan simply stops renewing.
+      toast.info(t("اشتراک پایه"), {
+        description: t("با پایان دوره‌ی فعلی، اشتراک شما تمدید نمی‌شود."),
+      });
+      return;
+    }
+    setCheckoutTier(tier); // paid tiers go through the payment gateway
   }
 
   function deleteAccount() {
@@ -114,12 +130,12 @@ export default function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <h1 className="font-heading text-2xl font-bold">تنظیمات</h1>
+      <h1 className="font-heading text-2xl font-bold">{t("تنظیمات")}</h1>
 
-      <SectionCard title="عمومی">
+      <SectionCard title={t("عمومی")}>
         <SettingRow
-          title="اعلان‌ها"
-          description="دریافت اعلان‌های سامانه"
+          title={t("اعلان‌ها")}
+          description={t("دریافت اعلان‌های سامانه")}
           control={
             <Switch
               checked={user.preferences.notificationsEnabled}
@@ -128,26 +144,35 @@ export default function SettingsPage() {
           }
         />
         <SettingRow
-          title="زبان"
+          title={t("زبان")}
           control={
             <Select
               value={user.preferences.language}
-              onValueChange={(v) => setPref({ language: v as "fa" | "en" })}
+              onValueChange={(v) => {
+                const language = v as "fa" | "en";
+                setLanguage(language); // switch the interface now
+                setPref({ language }); // and remember it on the server
+              }}
             >
               <SelectTrigger className="h-9 w-32">
-                <SelectValue />
+                {/* The raw value is a language code, so name it explicitly —
+                    each language is written in its own script, as is
+                    conventional for a language picker. */}
+                <SelectValue>
+                  {(value) => (value === "en" ? "English" : "فارسی")}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="fa">فارسی</SelectItem>
+                <SelectItem value="fa">{t("فارسی")}</SelectItem>
                 <SelectItem value="en">English</SelectItem>
               </SelectContent>
             </Select>
           }
         />
-        <SettingRow title="پوسته" description="روشن یا تیره" control={<ThemeToggle />} />
+        <SettingRow title={t("پوسته")} description={t("روشن یا تیره")} control={<ThemeToggle />} />
         <SettingRow
-          title="صدای سامانه"
-          description={`میزان صدا: ${toFaDigits(volume)}٪`}
+          title={t("صدای سامانه")}
+          description={t("میزان صدا: {n}٪", { n: toFaDigits(volume) })}
           control={
             <div dir="ltr" className="w-40">
               <Slider
@@ -155,16 +180,16 @@ export default function SettingsPage() {
                 max={100}
                 step={1}
                 onValueChange={(v) => setVolume(Array.isArray(v) ? v[0] : v)}
-                aria-label="میزان صدای سامانه"
+                aria-label={t("میزان صدای سامانه")}
               />
             </div>
           }
         />
       </SectionCard>
 
-      <SectionCard title="اشتراک">
+      <SectionCard title={t("اشتراک")}>
         <div className="flex items-center justify-between py-3">
-          <p className="text-sm">اشتراک فعلی</p>
+          <p className="text-sm">{t("اشتراک فعلی")}</p>
           <TierBadge tier={user.subscriptionTier} />
         </div>
         <div className="grid gap-3 pt-3 sm:grid-cols-3">
@@ -182,27 +207,31 @@ export default function SettingsPage() {
               >
                 <div className="mb-1 flex items-center gap-1.5">
                   {tier === "gold" ? <Crown className="size-4 text-gold" /> : null}
-                  <span className="font-medium">{benefits.label}</span>
+                  <span className="font-medium">{t(benefits.label)}</span>
                 </div>
                 <p className="mb-3 text-sm text-muted-foreground">
                   {tierPrice(tier, prices)}
                 </p>
                 <ul className="mb-4 flex-1 space-y-1 text-xs text-muted-foreground">
                   <li>
-                    استریم:{" "}
-                    {benefits.dailyStreamLimit === UNLIMITED
-                      ? "نامحدود"
-                      : `${toFaDigits(benefits.dailyStreamLimit)} در روز`}
+                    {t("استریم: {value}", {
+                      value:
+                        benefits.dailyStreamLimit === UNLIMITED
+                          ? t("نامحدود")
+                          : t("{n} در روز", { n: toFaDigits(benefits.dailyStreamLimit) }),
+                    })}
                   </li>
                   <li>
-                    پلی‌لیست:{" "}
-                    {benefits.playlistLimit === UNLIMITED
-                      ? "نامحدود"
-                      : toFaDigits(benefits.playlistLimit)}
+                    {t("پلی‌لیست: {value}", {
+                      value:
+                        benefits.playlistLimit === UNLIMITED
+                          ? t("نامحدود")
+                          : toFaDigits(benefits.playlistLimit),
+                    })}
                   </li>
-                  {benefits.canDownload ? <li>دانلود آهنگ</li> : null}
-                  {benefits.earlyAccess ? <li>دسترسی زودهنگام</li> : null}
-                  {benefits.canViewStats ? <li>مشاهده آمار</li> : null}
+                  {benefits.canDownload ? <li>{t("دانلود آهنگ")}</li> : null}
+                  {benefits.earlyAccess ? <li>{t("دسترسی زودهنگام")}</li> : null}
+                  {benefits.canViewStats ? <li>{t("مشاهده آمار")}</li> : null}
                 </ul>
                 <Button
                   size="sm"
@@ -213,10 +242,10 @@ export default function SettingsPage() {
                   {current ? (
                     <>
                       <Check />
-                      فعال
+                      {t("فعال")}
                     </>
                   ) : (
-                    "انتخاب"
+                    t("انتخاب")
                   )}
                 </Button>
               </div>
@@ -224,18 +253,18 @@ export default function SettingsPage() {
           })}
         </div>
         <p className="pt-3 text-xs text-muted-foreground">
-          پرداخت و اتصال به درگاه در فاز دوم انجام می‌شود.
+          {t("پرداخت از طریق درگاه زرین‌پال انجام می‌شود.")}
         </p>
       </SectionCard>
 
-      <SectionCard title="حساب کاربری">
+      <SectionCard title={t("حساب کاربری")}>
         <SettingRow
-          title="حذف حساب"
-          description="حساب و داده‌های شما برای همیشه حذف می‌شود."
+          title={t("حذف حساب")}
+          description={t("حساب و داده‌های شما برای همیشه حذف می‌شود.")}
           control={
             <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
               <Trash2 />
-              حذف حساب
+              {t("حذف حساب")}
             </Button>
           }
         />
@@ -244,19 +273,24 @@ export default function SettingsPage() {
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>حذف حساب کاربری؟</AlertDialogTitle>
+            <AlertDialogTitle>{t("حذف حساب کاربری؟")}</AlertDialogTitle>
             <AlertDialogDescription>
-              این عمل قابل بازگشت نیست و تمام پلی‌لیست‌ها و اطلاعات شما حذف می‌شود.
+              {t("این عمل قابل بازگشت نیست و تمام پلی‌لیست‌ها و اطلاعات شما حذف می‌شود.")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>انصراف</AlertDialogCancel>
+            <AlertDialogCancel>{t("انصراف")}</AlertDialogCancel>
             <AlertDialogAction variant="destructive" onClick={deleteAccount}>
-              حذف حساب
+              {t("حذف حساب")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <SubscriptionCheckoutDialog
+        tier={checkoutTier}
+        onClose={() => setCheckoutTier(null)}
+      />
     </div>
   );
 }

@@ -15,6 +15,7 @@ import type {
   Song,
   User,
 } from "@/lib/types";
+import { listSeparator } from "@/lib/format";
 
 export function byId<T extends { id: string }>(items: T[], id: string): T | undefined {
   return items.find((item) => item.id === id);
@@ -32,11 +33,11 @@ export function primaryArtist(song: Song | Album, artists: Artist[]): Artist | u
   return getArtist(artists, song.artistIds[0]);
 }
 
-/** Comma-joined artist names for a song/album ("بنیامین، کاوه"). */
+/** Comma-joined artist names for a song/album ("بنیامین، کاوه" / "Benyamin, Kaveh"). */
 export function artistNames(item: Song | Album, artists: Artist[]): string {
   return getArtistsByIds(artists, item.artistIds)
     .map((a) => a.name)
-    .join("، ");
+    .join(listSeparator());
 }
 
 /** Resolve song ids to songs, preserving the given order. */

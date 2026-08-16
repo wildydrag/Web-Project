@@ -14,12 +14,14 @@ import { formatCompact } from "@/lib/format";
 import { useNowPlaying } from "@/lib/hooks/use-now-playing";
 import { usePlayer } from "@/lib/stores/player-store";
 import { useCurrentUser } from "@/lib/stores/session-store";
+import { useT } from "@/lib/i18n";
 
 /**
  * Full-screen player for mobile. Opened by tapping the mini-player; toggles
  * between the cover and the lyrics. Gold members also see per-song stats.
  */
 export function FullScreenPlayer() {
+  const t = useT();
   const isExpanded = usePlayer((s) => s.isExpanded);
   const setExpanded = usePlayer((s) => s.setExpanded);
   const nowPlaying = useNowPlaying();
@@ -37,11 +39,11 @@ export function FullScreenPlayer() {
           variant="ghost"
           size="icon"
           onClick={() => setExpanded(false)}
-          aria-label="بستن پخش‌کننده"
+          aria-label={t("بستن پخش‌کننده")}
         >
           <ChevronDown />
         </Button>
-        <span className="text-sm font-medium">در حال پخش</span>
+        <span className="text-sm font-medium">{t("در حال پخش")}</span>
         <QueueSheet />
       </div>
 
@@ -53,12 +55,13 @@ export function FullScreenPlayer() {
                 {song.lyrics}
               </p>
             ) : (
-              <p className="text-sm text-muted-foreground">متنی ثبت نشده است.</p>
+              <p className="text-sm text-muted-foreground">{t("متنی ثبت نشده است.")}</p>
             )}
           </div>
         ) : (
           <CoverArt
             seed={song.coverSeed}
+            url={song.coverUrl}
             label={song.title}
             className="w-full max-w-xs"
             rounded="rounded-3xl"
@@ -72,7 +75,10 @@ export function FullScreenPlayer() {
           </div>
           {isGold ? (
             <p className="mt-2 text-xs text-muted-foreground">
-              {formatCompact(song.listenerCount)} شنونده · {formatCompact(song.streamCount)} استریم
+              {t("{listeners} شنونده · {streams} استریم", {
+                listeners: formatCompact(song.listenerCount),
+                streams: formatCompact(song.streamCount),
+              })}
             </p>
           ) : null}
         </div>
@@ -89,7 +95,7 @@ export function FullScreenPlayer() {
             onClick={() => setShowLyrics((v) => !v)}
           >
             <Mic2 />
-            متن آهنگ
+            {t("متن آهنگ")}
           </Button>
         </div>
       </div>

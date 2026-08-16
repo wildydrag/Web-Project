@@ -8,8 +8,10 @@ import { WorkItem } from "@/components/studio/work-item";
 import { byId, getArtistAlbums, getArtistSingles } from "@/lib/data/selectors";
 import { useDb } from "@/lib/stores/db-store";
 import { useCurrentUser } from "@/lib/stores/session-store";
+import { useT } from "@/lib/i18n";
 
 export default function StudioPage() {
+  const t = useT();
   const user = useCurrentUser();
   const artists = useDb((s) => s.artists);
   const albums = useDb((s) => s.albums);
@@ -20,8 +22,8 @@ export default function StudioPage() {
     return (
       <EmptyState
         icon={Mic2}
-        title="این بخش مخصوص هنرمندان است"
-        description="برای انتشار اثر باید حساب هنرمندی داشته باشید."
+        title={t("این بخش مخصوص هنرمندان است")}
+        description={t("برای انتشار اثر باید حساب هنرمندی داشته باشید.")}
       />
     );
   }
@@ -31,8 +33,8 @@ export default function StudioPage() {
 
   const heading = (
     <div>
-      <h1 className="font-heading text-2xl font-bold">مدیریت آثار</h1>
-      <p className="text-sm text-muted-foreground">آثار خود را منتشر و مدیریت کنید.</p>
+      <h1 className="font-heading text-2xl font-bold">{t("مدیریت آثار")}</h1>
+      <p className="text-sm text-muted-foreground">{t("آثار خود را منتشر و مدیریت کنید.")}</p>
     </div>
   );
 
@@ -44,10 +46,9 @@ export default function StudioPage() {
           <div className="flex size-12 items-center justify-center rounded-full bg-gold/15 text-gold">
             <Clock className="size-6" />
           </div>
-          <p className="font-medium">حساب هنرمندی شما در انتظار تایید است</p>
+          <p className="font-medium">{t("حساب هنرمندی شما در انتظار تایید است")}</p>
           <p className="max-w-sm text-sm text-muted-foreground">
-            پس از بررسی نمونه‌کارها توسط پشتیبانان، نتیجه به شما اطلاع داده می‌شود و
-            می‌توانید آثار خود را منتشر کنید.
+            {t("پس از بررسی نمونه‌کارها توسط پشتیبانان، نتیجه به شما اطلاع داده می‌شود و می‌توانید آثار خود را منتشر کنید.")}
           </p>
         </div>
       </div>
@@ -62,10 +63,10 @@ export default function StudioPage() {
           <div className="flex size-12 items-center justify-center rounded-full bg-destructive/15 text-destructive">
             <XCircle className="size-6" />
           </div>
-          <p className="font-medium">درخواست هنرمندی شما رد شد</p>
+          <p className="font-medium">{t("درخواست هنرمندی شما رد شد")}</p>
           {artist.rejectionReason ? (
             <p className="max-w-sm text-sm text-muted-foreground">
-              دلیل: {artist.rejectionReason}
+              {t("دلیل: {reason}", { reason: artist.rejectionReason ?? "" })}
             </p>
           ) : null}
         </div>
@@ -87,8 +88,8 @@ export default function StudioPage() {
       {!hasWorks ? (
         <EmptyState
           icon={Mic2}
-          title="هنوز اثری منتشر نکرده‌اید"
-          description="اولین تک‌آهنگ یا آلبوم خود را منتشر کنید."
+          title={t("هنوز اثری منتشر نکرده‌اید")}
+          description={t("اولین تک‌آهنگ یا آلبوم خود را منتشر کنید.")}
         />
       ) : (
         <div className="space-y-2">

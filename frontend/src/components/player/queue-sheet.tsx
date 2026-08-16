@@ -17,9 +17,12 @@ import { formatDuration } from "@/lib/format";
 import { useDb } from "@/lib/stores/db-store";
 import { usePlayer } from "@/lib/stores/player-store";
 import { cn } from "@/lib/utils";
+import { useEdges, useT } from "@/lib/i18n";
 
 /** "Up next" panel — the playback queue, with jump-to and remove. */
 export function QueueSheet() {
+  const t = useT();
+  const edges = useEdges();
   const queue = usePlayer((s) => s.queue);
   const index = usePlayer((s) => s.index);
   const isPlaying = usePlayer((s) => s.isPlaying);
@@ -31,19 +34,19 @@ export function QueueSheet() {
   return (
     <Sheet>
       <SheetTrigger
-        render={<Button variant="ghost" size="icon" aria-label="صف پخش" />}
+        render={<Button variant="ghost" size="icon" aria-label={t("صف پخش")} />}
       >
         <ListMusic />
       </SheetTrigger>
-      <SheetContent side="left" className="flex w-full flex-col p-0 sm:max-w-sm">
+      <SheetContent side={edges.end} className="flex w-full flex-col p-0 sm:max-w-sm">
         <SheetHeader className="border-b">
-          <SheetTitle>صف پخش</SheetTitle>
+          <SheetTitle>{t("صف پخش")}</SheetTitle>
         </SheetHeader>
 
         <div className="scrollbar-slim flex-1 overflow-y-auto p-2">
           {queue.length === 0 ? (
             <p className="p-8 text-center text-sm text-muted-foreground">
-              صف پخش خالی است.
+              {t("صف پخش خالی است.")}
             </p>
           ) : (
             <ul className="space-y-1">
@@ -65,6 +68,7 @@ export function QueueSheet() {
                     >
                       <CoverArt
                         seed={song.coverSeed}
+                        url={song.coverUrl}
                         label={song.title}
                         className="size-10"
                         rounded="rounded-md"
@@ -96,7 +100,7 @@ export function QueueSheet() {
                           size="icon-sm"
                           className="opacity-0 transition-opacity group-hover:opacity-100"
                           onClick={() => removeFromQueue(i)}
-                          aria-label="حذف از صف"
+                          aria-label={t("حذف از صف")}
                         >
                           <X />
                         </Button>

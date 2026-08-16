@@ -21,8 +21,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useDb } from "@/lib/stores/db-store";
 import { useSession } from "@/lib/stores/session-store";
+import { registerErrorMessage } from "@/lib/api/errors";
+import { useT } from "@/lib/i18n";
 
 // ── Validation schemas ──────────────────────────────────────────────────────
 
@@ -51,17 +52,25 @@ const artistSchema = z.object({
 type ListenerForm = z.infer<typeof listenerSchema>;
 type ArtistForm = z.infer<typeof artistSchema>;
 
-/** Small inline validation message. */
+/**
+ * Small inline validation message.
+ *
+ * The schemas above are built once at module load, where no hook can run, so
+ * their messages stay in Persian — which is exactly the dictionary key. Every
+ * message reaches the screen through this one component, so translating here
+ * covers all of them and keeps working when the language changes.
+ */
 function FieldError({ message }: { message?: string }) {
-  return message ? <p className="text-xs text-destructive">{message}</p> : null;
+  const t = useT();
+  return message ? <p className="text-xs text-destructive">{t(message)}</p> : null;
 }
 
 // ── Listener sign-up ─────────────────────────────────────────────────────────
 
 function ListenerSignUp() {
+  const t = useT();
   const router = useRouter();
-  const addListener = useDb((s) => s.addListener);
-  const setCurrentUser = useSession((s) => s.setCurrentUser);
+  const registerListener = useSession((s) => s.registerListener);
 
   const {
     register,
@@ -73,35 +82,40 @@ function ListenerSignUp() {
     defaultValues: { gender: "unspecified", privacy: false },
   });
 
-  function onSubmit(data: ListenerForm) {
-    const user = addListener({
-      displayName: data.displayName,
-      email: data.email,
-      gender: data.gender,
-      birthDate: data.birthDate,
-    });
-    setCurrentUser(user.id);
-    toast.success("حساب شما ساخته شد. خوش آمدید!");
-    router.replace("/home");
+  async function onSubmit(data: ListenerForm) {
+    try {
+      await registerListener({
+        displayName: data.displayName,
+        email: data.email,
+        password: data.password,
+        gender: data.gender,
+        birthDate: data.birthDate,
+      });
+      toast.success(t("حساب شما ساخته شد. خوش آمدید!"));
+      router.replace("/home");
+    } catch (error) {
+      const { title, description } = registerErrorMessage(error);
+      toast.error(title, { description });
+    }
   }
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5">
       <div className="space-y-1.5">
-        <Label htmlFor="displayName">نام نمایشی</Label>
+        <Label htmlFor="displayName">{t("نام نمایشی")}</Label>
         <Input id="displayName" className="h-10" {...register("displayName")} />
         <FieldError message={errors.displayName?.message} />
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="reg-email">ایمیل</Label>
+        <Label htmlFor="reg-email">{t("ایمیل")}</Label>
         <Input id="reg-email" type="email" dir="ltr" className="h-10" {...register("email")} />
         <FieldError message={errors.email?.message} />
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
-          <Label htmlFor="reg-password">رمز عبور</Label>
+          <Label htmlFor="reg-password">{t("رمز عبور")}</Label>
           <Input
             id="reg-password"
             type="password"
@@ -112,7 +126,7 @@ function ListenerSignUp() {
           <FieldError message={errors.password?.message} />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="confirm">تکرار رمز عبور</Label>
+          <Label htmlFor="confirm">{t("تکرار رمز عبور")}</Label>
           <Input
             id="confirm"
             type="password"
@@ -126,7 +140,7 @@ function ListenerSignUp() {
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
-          <Label htmlFor="birthDate">تاریخ تولد</Label>
+          <Label htmlFor="birthDate">{t("تاریخ تولد")}</Label>
           <Input
             id="birthDate"
             type="date"
@@ -137,7 +151,7 @@ function ListenerSignUp() {
           <FieldError message={errors.birthDate?.message} />
         </div>
         <div className="space-y-1.5">
-          <Label>جنسیت</Label>
+          <Label>{t("جنسیت")}</Label>
           <Controller
             control={control}
             name="gender"
@@ -147,10 +161,10 @@ function ListenerSignUp() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="female">زن</SelectItem>
-                  <SelectItem value="male">مرد</SelectItem>
-                  <SelectItem value="other">سایر</SelectItem>
-                  <SelectItem value="unspecified">ترجیح می‌دهم نگویم</SelectItem>
+                  <SelectItem value="female">{t("زن")}</SelectItem>
+                  <SelectItem value="male">{t("مرد")}</SelectItem>
+                  <SelectItem value="other">{t("سایر")}</SelectItem>
+                  <SelectItem value="unspecified">{t("ترجیح می‌دهم نگویم")}</SelectItem>
                 </SelectContent>
               </Select>
             )}
@@ -173,14 +187,14 @@ function ListenerSignUp() {
             )}
           />
           <Label htmlFor="privacy" className="text-sm leading-snug font-normal">
-            <PrivacyPolicyDialog /> را خوانده‌ام و می‌پذیرم.
+            <PrivacyPolicyDialog /> {t("را خوانده‌ام و می‌پذیرم.")}
           </Label>
         </div>
         <FieldError message={errors.privacy?.message} />
       </div>
 
       <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
-        ساخت حساب و ورود
+        {t("ساخت حساب و ورود")}
       </Button>
     </form>
   );
@@ -189,9 +203,9 @@ function ListenerSignUp() {
 // ── Artist sign-up ───────────────────────────────────────────────────────────
 
 function ArtistSignUp() {
+  const t = useT();
   const router = useRouter();
-  const addArtistApplicant = useDb((s) => s.addArtistApplicant);
-  const setCurrentUser = useSession((s) => s.setCurrentUser);
+  const registerArtist = useSession((s) => s.registerArtist);
 
   const {
     register,
@@ -199,28 +213,33 @@ function ArtistSignUp() {
     formState: { errors, isSubmitting },
   } = useForm<ArtistForm>({ resolver: zodResolver(artistSchema) });
 
-  function onSubmit(data: ArtistForm) {
-    const { user } = addArtistApplicant({
-      name: data.name,
-      email: data.email,
-      portfolio: data.portfolio,
-    });
-    setCurrentUser(user.id);
-    toast.success("درخواست هنرمندی ثبت شد", {
-      description: "حساب شما در وضعیت «در انتظار تایید» قرار گرفت.",
-    });
-    router.replace("/home");
+  async function onSubmit(data: ArtistForm) {
+    try {
+      await registerArtist({
+        name: data.name,
+        email: data.email,
+        password: data.password,
+        portfolio: data.portfolio,
+      });
+      toast.success(t("درخواست هنرمندی ثبت شد"), {
+        description: t("حساب شما در وضعیت «در انتظار تایید» قرار گرفت."),
+      });
+      router.replace("/home");
+    } catch (error) {
+      const { title, description } = registerErrorMessage(error);
+      toast.error(title, { description });
+    }
   }
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5">
       <div className="space-y-1.5">
-        <Label htmlFor="artist-name">نام هنری</Label>
+        <Label htmlFor="artist-name">{t("نام هنری")}</Label>
         <Input id="artist-name" className="h-10" {...register("name")} />
         <FieldError message={errors.name?.message} />
       </div>
       <div className="space-y-1.5">
-        <Label htmlFor="artist-email">ایمیل</Label>
+        <Label htmlFor="artist-email">{t("ایمیل")}</Label>
         <Input
           id="artist-email"
           type="email"
@@ -231,7 +250,7 @@ function ArtistSignUp() {
         <FieldError message={errors.email?.message} />
       </div>
       <div className="space-y-1.5">
-        <Label htmlFor="artist-password">رمز عبور</Label>
+        <Label htmlFor="artist-password">{t("رمز عبور")}</Label>
         <Input
           id="artist-password"
           type="password"
@@ -242,20 +261,20 @@ function ArtistSignUp() {
         <FieldError message={errors.password?.message} />
       </div>
       <div className="space-y-1.5">
-        <Label htmlFor="portfolio">نمونه‌کارها</Label>
+        <Label htmlFor="portfolio">{t("نمونه‌کارها")}</Label>
         <Input
           id="portfolio"
           className="h-10"
-          placeholder="لینک به آثار یا توضیح کوتاه"
+          placeholder={t("لینک به آثار یا توضیح کوتاه")}
           {...register("portfolio")}
         />
         <FieldError message={errors.portfolio?.message} />
       </div>
       <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
-        ارسال درخواست هنرمندی
+        {t("ارسال درخواست هنرمندی")}
       </Button>
       <p className="text-center text-xs text-muted-foreground">
-        پس از بررسی توسط پشتیبانان، نتیجه به شما اطلاع داده می‌شود.
+        {t("پس از بررسی توسط پشتیبانان، نتیجه به شما اطلاع داده می‌شود.")}
       </p>
     </form>
   );
@@ -264,21 +283,22 @@ function ArtistSignUp() {
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function RegisterPage() {
+  const t = useT();
   return (
     <div className="rounded-2xl border bg-card p-6 shadow-sm ring-1 ring-foreground/5">
       <div className="mb-5 flex flex-col items-center gap-2 text-center">
         <Brand />
-        <h1 className="mt-2 font-heading text-xl font-bold">ساخت حساب</h1>
-        <p className="text-sm text-muted-foreground">به نوا بپیوندید.</p>
+        <h1 className="mt-2 font-heading text-xl font-bold">{t("ساخت حساب")}</h1>
+        <p className="text-sm text-muted-foreground">{t("به نوا بپیوندید.")}</p>
       </div>
 
       <Tabs defaultValue="listener">
         <TabsList className="w-full">
           <TabsTrigger value="listener" className="flex-1">
-            کاربر عادی
+            {t("کاربر عادی")}
           </TabsTrigger>
           <TabsTrigger value="artist" className="flex-1">
-            هنرمند
+            {t("هنرمند")}
           </TabsTrigger>
         </TabsList>
         <TabsContent value="listener" className="pt-4">
@@ -290,9 +310,9 @@ export default function RegisterPage() {
       </Tabs>
 
       <p className="mt-4 text-center text-sm text-muted-foreground">
-        حساب دارید؟{" "}
+        {t("حساب دارید؟")}{" "}
         <Link href="/login" className="font-medium text-primary hover:underline">
-          ورود
+          {t("ورود")}
         </Link>
       </p>
     </div>

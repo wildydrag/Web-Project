@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>نوا — گزارش نهایی پروژه</title>
+<style>
+  @font-face {
+    font-family: Estedad;
+    src: url("../frontend/src/fonts/Estedad-Variable.woff2") format("woff2");
+    font-weight: 100 900;
+  }
+
+  @page {
+    size: A4;
+    margin: 20mm 18mm 18mm 18mm;
+    @bottom-center {
+      content: counter(page);
+      font-family: Estedad, Tahoma, sans-serif;
+      font-size: 9pt;
+      color: #8a8078;
+    }
+  }
+  @page :first { margin: 0; @bottom-center { content: none; } }
+
+  * { box-sizing: border-box; }
+  body {
+    font-family: Estedad, Tahoma, sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.85;
+    color: #24211e;
+    margin: 0;
+  }
+
+  /* ── Cover ─────────────────────────────────────────────────────────── */
+  .cover {
+    page-break-after: always;
+    height: 297mm;
+    padding: 70mm 22mm 22mm;
+    background: #1c1a18;
+    color: #f5f1ec;
+  }
+  .cover .mark {
+    font-size: 34pt; font-weight: 800; letter-spacing: 2pt;
+    color: #e8804f; margin-bottom: 4mm;
+  }
+  .cover h1 { font-size: 21pt; font-weight: 700; margin: 0 0 2mm; }
+  .cover .sub { font-size: 12pt; color: #b9aea4; margin-bottom: 18mm; }
+  .cover .rule { width: 26mm; height: 2pt; background: #e8804f; margin-bottom: 8mm; }
+  .cover .meta { font-size: 11pt; line-height: 2.2; color: #d8cfc6; }
+  .cover .team { margin-top: 14mm; font-size: 12pt; font-weight: 600; letter-spacing: 1pt; }
+
+  /* ── Headings ──────────────────────────────────────────────────────── */
+  h1 {
+    font-size: 15pt; font-weight: 700; color: #1c1a18;
+    margin: 11mm 0 4mm; padding-bottom: 2mm;
+    border-bottom: 1.5pt solid #e8804f;
+    page-break-after: avoid;
+  }
+  h1:first-of-type { margin-top: 0; }
+  h2 {
+    font-size: 12pt; font-weight: 700; color: #3d3833;
+    margin: 7mm 0 2.5mm; page-break-after: avoid;
+  }
+  h3 {
+    font-size: 10.5pt; font-weight: 700; color: #5c534b;
+    margin: 5mm 0 2mm; page-break-after: avoid;
+  }
+  p { margin: 0 0 3mm; text-align: justify; }
+
+  /* ── Lists ─────────────────────────────────────────────────────────── */
+  ul, ol { margin: 0 0 3mm; padding-inline-start: 6mm; }
+  li { margin-bottom: 1.5mm; }
+
+  /* ── Tables ────────────────────────────────────────────────────────── */
+  table {
+    width: 100%; border-collapse: collapse;
+    margin: 3mm 0 5mm; font-size: 9.5pt;
+    page-break-inside: avoid;
+  }
+  th {
+    background: #f2ede8; color: #3d3833; font-weight: 700;
+    text-align: right; padding: 2mm 2.5mm;
+    border-bottom: 1pt solid #ddd3c9;
+  }
+  td {
+    padding: 2mm 2.5mm; border-bottom: 0.5pt solid #ece5dd;
+    vertical-align: top;
+  }
+  tr:last-child td { border-bottom: none; }
+  td.tight { white-space: nowrap; }
+
+  /* ── Code ──────────────────────────────────────────────────────────── */
+  .file {
+    direction: ltr; text-align: left;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 8pt; color: #8a8078;
+    margin: 3mm 0 0;
+  }
+  pre {
+    direction: ltr; text-align: left;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 8.2pt; line-height: 1.55;
+    background: #faf7f4; border: 0.5pt solid #e6ddd4;
+    border-inline-start: 2pt solid #e8804f;
+    border-radius: 2pt; padding: 3mm; margin: 1mm 0 4mm;
+    white-space: pre-wrap; word-wrap: break-word;
+    page-break-inside: avoid;
+  }
+  code {
+    font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 9pt;
+    /* Isolation is done with Unicode controls (U+2066/U+2069) in the markup,
+       because WeasyPrint does not implement `unicode-bidi: isolate`. */
+  }
+  /* Persian written inside an LTR <pre> needs its own isolated RTL run. */
+  .snippet { page-break-inside: avoid; }
+
+  /* ── Callouts ──────────────────────────────────────────────────────── */
+  .note {
+    background: #faf7f4; border-inline-start: 2.5pt solid #e8804f;
+    padding: 3mm 4mm; margin: 3mm 0 4mm; border-radius: 2pt;
+    page-break-inside: avoid;
+  }
+  .note p:last-child { margin-bottom: 0; }
+  .note .label { font-weight: 700; color: #c05e2c; display: block; margin-bottom: 1mm; }
+
+  .ok   { color: #2d7a3e; font-weight: 700; }
+  .part { color: #b07d15; font-weight: 700; }
+  .strong-tag { color: #2d7a3e; font-weight: 700; }
+  .weak-tag   { color: #b3442d; font-weight: 700; }
+  .lead { color: #5c534b; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ COVER ═══════════════════ -->
+<section class="cover">
+  <div class="mark">نـوا</div>
+  <div class="rule"></div>
+  <h1>Nava — سرویس استریم موسیقی</h1>
+  <div class="sub">درس برنامه‌سازی وب · دانشگاه صنعتی شریف</div>
+  <div class="meta">
+    گزارش نهایی پروژه<br>
+    فاز اول (فرانت‌اند) و فاز دوم (بک‌اند و ادغام)
+  </div>
+  <div class="team">محمد &nbsp;·&nbsp; عماد &nbsp;·&nbsp; مهدی</div>
+</section>
+
+<!-- ═══════════════════ ۱ ═══════════════════ -->
+<h1>۱. معرفی پروژه</h1>
+<p>
+  نوا یک سرویس استریم موسیقی است با چهار نقش کاربری — شنونده، هنرمند، پشتیبان و
+  مدیر سامانه — و سه سطح اشتراک (پایه، نقره‌ای، طلایی). پروژه در دو فاز ساخته شد:
+  فاز اول رابط کاربری کامل با داده‌ی ماک، و فاز دوم بک‌اند واقعی و ادغام آن با
+  فرانت‌اند.
+</p>
+
+<h2>وضعیت فعلی پروژه</h2>
+<table>
+  <tr>
+    <th style="width:22%">بخش</th>
+    <th>فناوری</th>
+    <th style="width:22%">حجم</th>
+  </tr>
+  <tr>
+    <td>فرانت‌اند</td>
+    <td>Next.js 16 · React 19 · TypeScript · Tailwind v4 · Zustand</td>
+    <td>۱۳۱ فایل · ۷۴ تست</td>
+  </tr>
+  <tr>
+    <td>بک‌اند</td>
+    <td>Django 5.2 · Django REST Framework · JWT · PostgreSQL</td>
+    <td>۸۷ فایل · ۱۸۸ تست</td>
+  </tr>
+  <tr>
+    <td>API</td>
+    <td>۱۸ مسیر REST با خروجی camelCase</td>
+    <td>—</td>
+  </tr>
+</table>
+
+<p>
+  اجرای کامل پروژه با یک دستور: <code>⁦docker compose up --build⁩</code> — راهنمای
+  کامل اجرا در فایل <code>⁦README.md⁩</code> ریشه‌ی مخزن آمده است.
+</p>
+
+<!-- ═══════════════════ ۲ ═══════════════════ -->
+<h1>۲. نقش و کارهای هر عضو</h1>
+<p>کار روی سه شاخه‌ی مستقل Git پیش رفت و از طریق Pull Request ادغام شد.</p>
+
+<h2>فاز اول — فرانت‌اند</h2>
+<table>
+  <tr>
+    <th style="width:14%">عضو</th>
+    <th>کارها</th>
+    <th style="width:26%">شاخه</th>
+  </tr>
+  <tr>
+    <td>عماد</td>
+    <td>زیرساخت و ساختار پروژه، ورود و ثبت‌نام، صفحه خانه، نمایه کاربر و مدیریت آن، تنظیمات، اعلانات، و PWA</td>
+    <td class="tight"><code>⁦feature/core-auth⁩</code></td>
+  </tr>
+  <tr>
+    <td>مهدی</td>
+    <td>پخش‌کننده موسیقی (صف، تکرار، شافل، متن آهنگ)، آرشیو آلبوم و تک‌آهنگ، پلی‌لیست‌ها، نمایه هنرمند</td>
+    <td class="tight"><code>⁦feature/app-player⁩</code></td>
+  </tr>
+  <tr>
+    <td>محمد</td>
+    <td>استودیوی هنرمند، داشبورد پشتیبان و مدیر، تیکت‌ها، احراز هویت هنرمندان، حسابرسی، و تست‌ها</td>
+    <td class="tight"><code>⁦feature/dashboard-studio⁩</code></td>
+  </tr>
+</table>
+
+<h2>فاز دوم — بک‌اند و ادغام</h2>
+<p>در این فاز کار بیشتر یکپارچه بود تا تفکیک‌شده، چون بک‌اند یک واحد به‌هم‌پیوسته است:</p>
+<ul>
+  <li><strong>محمد:</strong> طراحی مدل‌ها و معماری اپ‌ها، احراز هویت و سطوح دسترسی، گزارش‌گیری و حسابرسی، اشتراک و درگاه پرداخت، تست‌ها، و داکرایز کردن.</li>
+  <li><strong>عماد:</strong> بازبینی ساختار پروژه و قراردادهای کد، بخش حساب کاربری و همگام‌سازی تنظیمات.</li>
+  <li><strong>مهدی:</strong> بخش کاتالوگ و پلی‌لیست، آپلود رسانه، و اتصال پخش‌کننده به ثبت استریم در سرور.</li>
+  <li><strong>مشترک:</strong> ادغام فرانت‌اند با API، دوزبانه‌سازی رابط کاربری، بازبینی کد یکدیگر، و تهیه‌ی همین گزارش.</li>
+</ul>
+
+<!-- ═══════════════════ ۳ ═══════════════════ -->
+<h1>۳. قوانین توسعه و فرآیند کار</h1>
+
+<h2>نام‌گذاری</h2>
+<table>
+  <tr><th style="width:38%">مورد</th><th>قرارداد</th></tr>
+  <tr><td>کامپوننت‌های React</td><td>PascalCase — مثل <code>⁦PlayerBar⁩</code>، <code>⁦WorkItem⁩</code></td></tr>
+  <tr><td>فایل‌ها و پوشه‌ها</td><td>kebab-case — مثل <code>⁦publish-work-dialog.tsx⁩</code></td></tr>
+  <tr><td>توابع و متغیرها (TS)</td><td>camelCase — مثل <code>⁦toggleShuffle⁩</code></td></tr>
+  <tr><td>استورها</td><td>با پیشوند <code>⁦use⁩</code> — مثل <code>⁦useDb⁩</code>، <code>⁦usePlayer⁩</code></td></tr>
+  <tr><td>کلاس‌ها و ماژول‌های پایتون</td><td>PascalCase برای کلاس، snake_case برای تابع و فیلد</td></tr>
+  <tr><td>اپ‌های جنگو</td><td>اسم جمع و حوزه‌محور — <code>⁦accounts⁩</code>، <code>⁦catalog⁩</code>، <code>⁦playlists⁩</code></td></tr>
+  <tr><td>شاخه‌های Git</td><td><code>⁦feature/&lt;area&gt;⁩</code> — مثل <code>⁦feature/dashboard-studio⁩</code></td></tr>
+  <tr><td>پیام کامیت</td><td>Conventional Commits — <code>⁦feat/fix/test/docs/chore⁩</code></td></tr>
+</table>
+
+<h2>فرآیند</h2>
+<ul>
+  <li>هر عضو روی شاخه‌ی خودش کامیت‌های کوچک و معنادار می‌زد.</li>
+  <li>ادغام کد فقط از طریق Pull Request و پس از بازبینی انجام می‌شد.</li>
+  <li>هیچ کدی بدون سبز بودن تست‌ها ادغام نشد.</li>
+  <li>مقادیر محرمانه و وابسته به محیط در فایل <code>⁦.env⁩</code> نگهداری می‌شوند و در گیت قرار نمی‌گیرند؛ به‌جایش <code>⁦.env.example⁩</code> بدون مقدار واقعی هست.</li>
+</ul>
+
+<!-- ═══════════════════ ۴ ═══════════════════ -->
+<h1>۴. ساختار دو پروژه و توجیه آن</h1>
+
+<h2>فرانت‌اند</h2>
+<pre>src/
+├─ app/           ⁧صفحه‌ها و مسیرها (App Router)⁩
+│   ├─ (auth)/        ⁧ورود، ثبت‌نام، فراموشی رمز⁩
+│   ├─ (app)/         ⁧تجربه‌ی شنونده و هنرمند + پخش‌کننده⁩
+│   └─ dashboard/     ⁧پنل پشتیبان و مدیر (بدون پخش‌کننده)⁩
+├─ components/    ⁧اجزای رابط کاربری، تفکیک‌شده بر اساس حوزه⁩
+└─ lib/           ⁧منطق و داده⁩</pre>
+<p>
+  <strong>توجیه:</strong> مسیرها با «گروه مسیر» به سه تجربه‌ی مستقل تقسیم شده‌اند،
+  چون هر گروه چیدمان و سطح دسترسی متفاوتی دارد. مهم‌تر اینکه منطق در <code>⁦lib⁩</code>
+  از ظاهر در <code>⁦components⁩</code> جدا است؛ همین جداسازی باعث شد در فاز دوم بتوانیم
+  لایه‌ی داده را عوض کنیم بدون آنکه کامپوننت‌ها تغییر کنند.
+</p>
+
+<h2>بک‌اند</h2>
+<pre>backend/
+├─ nava/           ⁧تنظیمات و آدرس‌دهی پروژه⁩
+├─ accounts/       ⁧کاربر، ترجیحات، هنرمند، دنبال‌کردن⁩
+├─ catalog/        ⁧آهنگ، آلبوم، اعتبار هنرمندان⁩
+├─ playlists/      ⁧پلی‌لیست و آیتم‌های آن⁩
+├─ engagement/     ⁧اعلان و تیکت پشتیبانی⁩
+├─ subscriptions/  ⁧قیمت‌ها، اشتراک، پرداخت، درگاه⁩
+├─ reports/        ⁧لاگ استریم، گزارش‌ها، تسویه هنرمندان⁩
+└─ common/         ⁧مدل و کلاس‌های پایه، دسترسی‌ها، ثابت‌ها⁩</pre>
+<p>
+  <strong>توجیه:</strong> به‌جای یک اپ بزرگ، هفت اپ کوچک و حوزه‌محور ساختیم. هر اپ
+  یک مسئولیت دارد و مستقل قابل فهم است؛ مثلاً همه‌ی منطق پرداخت داخل
+  <code>⁦subscriptions⁩</code> است و بقیه‌ی سیستم فقط از طریق سرویس‌های آن با پرداخت
+  کار می‌کند. اپ <code>⁦common⁩</code> هم چیزهای مشترک را نگه می‌دارد تا تکرار نشوند.
+</p>
+
+<!-- ═══════════════════ ۵ ═══════════════════ -->
+<h1>۵. مدل‌های بک‌اند، روابط و توجیه وجودشان</h1>
+<table>
+  <tr>
+    <th style="width:20%">مدل</th>
+    <th style="width:24%">رابطه‌ی کلیدی</th>
+    <th>چرا وجود دارد</th>
+  </tr>
+  <tr><td><code>⁦User⁩</code></td><td>—</td><td>حساب کاربری با نقش و اشتراک؛ ایمیل شناسه‌ی ورود است</td></tr>
+  <tr><td><code>⁦UserPreferences⁩</code></td><td>OneToOne → User</td><td>تنظیمات کاربر (از جمله زبان) روی سرور تا بین همه‌ی دستگاه‌ها یکسان بماند</td></tr>
+  <tr><td><code>⁦Artist⁩</code></td><td>OneToOne → User</td><td>پروفایل هنرمند جداست چون کاتالوگ به آن ارجاع می‌دهد و فرآیند تایید هویت اینجاست</td></tr>
+  <tr><td><code>⁦Follow⁩</code></td><td>User × Artist</td><td>جدول واسط دنبال‌کردن؛ مبنای شمارش دنبال‌کننده و ارسال اعلان اثر جدید</td></tr>
+  <tr><td><code>⁦Album / Song⁩</code></td><td>Song → Album (FK)</td><td>کاتالوگ؛ تک‌آهنگ آلبوم ندارد و همین یک فیلد هر دو حالت را پوشش می‌دهد</td></tr>
+  <tr><td><code>⁦SongArtist⁩</code></td><td>through (M2M)</td><td>ترتیب اعتبار هنرمندان را نگه می‌دارد تا هنرمند اصلی از همکار تفکیک شود</td></tr>
+  <tr><td><code>⁦AlbumArtist⁩</code></td><td>through (M2M)</td><td>همان منطق برای آلبوم</td></tr>
+  <tr><td><code>⁦Playlist⁩</code></td><td>FK → User</td><td>پلی‌لیست کاربر؛ سقف تعداد بر اساس اشتراک اعمال می‌شود</td></tr>
+  <tr><td><code>⁦PlaylistItem⁩</code></td><td>through (M2M)</td><td>ترتیب آهنگ‌ها در پلی‌لیست را حفظ می‌کند</td></tr>
+  <tr><td><code>⁦Notification⁩</code></td><td>FK → User</td><td>اعلان‌ها فقط سمت سرور ساخته می‌شوند (انتشار اثر، نتیجه تایید، تیکت)</td></tr>
+  <tr><td><code>⁦Ticket / TicketMessage⁩</code></td><td>FK زنجیره‌ای</td><td>تیکت پشتیبانی و رشته‌ی پیام‌های آن</td></tr>
+  <tr><td><code>⁦PlatformSettings⁩</code></td><td>تک‌ردیفی</td><td>قیمت‌ها و نرخ پاداش؛ مدیر بدون تغییر کد آن‌ها را عوض می‌کند</td></tr>
+  <tr><td><code>⁦Subscription⁩</code></td><td>FK → User</td><td>دوره‌ی خریداری‌شده با تاریخ شروع و پایان؛ مبنای انقضا</td></tr>
+  <tr><td><code>⁦Payment⁩</code></td><td>FK → User</td><td>هر تراکنش با وضعیت در حال انجام / موفق / ناموفق پیگیری می‌شود</td></tr>
+  <tr><td><code>⁦StreamEvent⁩</code></td><td>User × Song</td><td>لاگ هر پخش — ستون فقرات آمار (توضیح پایین)</td></tr>
+  <tr><td><code>⁦Payout⁩</code></td><td>FK → Artist</td><td>تسویه ماهانه هنرمند، محاسبه‌شده از همان لاگ</td></tr>
+</table>
+
+<div class="note">
+  <span class="label">چرا StreamEvent مهم‌ترین تصمیم مدل‌سازی ماست</span>
+  <p>یک جدول لاگ ساده، هم‌زمان سه مسئله را حل کرد:</p>
+  <p>
+    <strong>۱)</strong> سقف استریم روزانه: کافیست رکوردهای امروز شمرده شوند — پس هیچ
+    کرون‌جاب و ریست نیمه‌شبی لازم نیست.<br>
+    <strong>۲)</strong> آمار آهنگ‌ها و هنرمندان.<br>
+    <strong>۳)</strong> گزارش مالی ماهانه که به «شنونده‌ی منحصربه‌فرد» نیاز دارد و
+    بدون تاریخچه اصلاً قابل محاسبه نیست.
+  </p>
+</div>
+
+<!-- ═══════════════════ ۶ ═══════════════════ -->
+<h1>۶. توجیه نگهداری‌پذیری کد</h1>
+
+<h3>۱) تنها منبع حقیقت</h3>
+<p>
+  قوانین اشتراک (سقف استریم، سقف پلی‌لیست، دسترسی زودهنگام) در یک فایل ثابت تعریف
+  شده‌اند و همه‌ی بخش‌ها از همان می‌خوانند. تغییر یک محدودیت یعنی ویرایش یک خط، نه
+  جست‌وجو در کل پروژه.
+</p>
+
+<h3>۲) داده‌ی پویا به‌جای عدد ثابت در کد</h3>
+<p>
+  قیمت اشتراک‌ها و نرخ پاداش هنرمندان در پایگاه داده نگهداری می‌شوند نه در کد. مدیر
+  آن‌ها را از داشبورد عوض می‌کند و کل سامانه بلافاصله تبعیت می‌کند — دقیقاً همان
+  چیزی که صورت پروژه خواسته بود.
+</p>
+
+<h3>۳) درز فاز دوم</h3>
+<p>
+  از فاز اول تمام تغییرات داده در یک لایه‌ی متمرکز جمع شده بود و شکل داده‌ها عمداً
+  نزدیک به خروجی بک‌اند طراحی شده بود. نتیجه این شد که در فاز دوم فقط بدنه‌ی همان
+  توابع به فراخوانی API تبدیل شد و ده‌ها کامپوننتی که از آن‌ها استفاده می‌کنند اصلاً
+  تغییر نکردند.
+</p>
+
+<h3>۴) جداسازی سیاست از مکانیزم</h3>
+<p>
+  پخش‌کننده فقط می‌داند «چطور پخش کند» و هیچ اطلاعی از اشتراک و دیتابیس ندارد؛
+  بررسی مجوز پخش در لایه‌ی جداگانه است. همین باعث شد استور پخش‌کننده کاملاً مستقل و
+  قابل تست بماند.
+</p>
+
+<h3>۵) الگوهای طراحی</h3>
+<ul>
+  <li><strong>الگوی استراتژی:</strong> درگاه پرداخت یک رابط مشترک با دو پیاده‌سازی دارد (زرین‌پال و آزمایشی آفلاین). تعویض درگاه فقط تغییر یک تنظیم است، نه تغییر کد.</li>
+  <li><strong>کلاس پایه‌ی مشترک:</strong> شناسه‌ی خوانا و تاریخ ساخت یک‌بار در مدل پایه تعریف شده و همه‌ی مدل‌ها از آن ارث می‌برند.</li>
+  <li><strong>لایه‌ی سرویس:</strong> منطق پیچیده (پرداخت، گزارش‌گیری، پیشنهاددهنده) در فایل‌های <code>⁦services⁩</code> جدا از ویوها قرار دارد.</li>
+  <li><strong>پرهیز از کد تکراری:</strong> با ViewSet و Serializer های DRF، به‌جای نوشتن دستی پنج ویو برای هر منبع، یک کلاس نوشته می‌شود.</li>
+</ul>
+
+<h3>۶) تست به‌عنوان تور ایمنی</h3>
+<p>
+  ۱۸۸ تست بک‌اند و ۷۴ تست فرانت‌اند. تست‌ها دو لایه‌اند: تست‌های واحد که توابع خالص
+  را مستقیم صدا می‌زنند (بدون دیتابیس، در کسری از ثانیه)، و تست‌های یکپارچگی که مسیر
+  کامل درخواست را می‌سنجند. نتیجه این است که وقتی تستی می‌شکند، معمولاً دقیقاً
+  می‌دانیم کدام تابع مقصر است. هیچ تستی به شبکه وابسته نیست: درگاه پرداخت در
+  تست‌ها روی حالت آفلاین قفل شده و پاسخ‌های زرین‌پال با نمونه‌های واقعی ثبت‌شده
+  شبیه‌سازی می‌شوند.
+</p>
+
+<!-- ═══════════════════ ۷ ═══════════════════ -->
+<h1>۷. نقش هوش مصنوعی در توسعه</h1>
+<p>
+  از هوش مصنوعی به‌عنوان یک هم‌تیمی کمکی استفاده کردیم، نه به‌عنوان جایگزین
+  تصمیم‌گیری. تصمیم‌های معماری — تقسیم اپ‌ها، طراحی مدل‌ها، انتخاب «درز فاز دوم» —
+  با خودمان بود و هوش مصنوعی بیشتر در این کارها کمک کرد:
+</p>
+<ul>
+  <li>تولید سریع کدهای تکراری مثل serializer ها، فرم‌ها و جدول‌ها.</li>
+  <li>نوشتن تست برای حالت‌های مرزی که ممکن بود از قلم بیفتند.</li>
+  <li>بازبینی کد و پیدا کردن ناسازگاری بین بخش‌ها.</li>
+  <li>مستندسازی و توضیح بخش‌های پیچیده.</li>
+</ul>
+<p>
+  در مقابل، هر خروجی را خودمان بازبینی و اجرا کردیم؛ چند مورد از پیشنهادهای اولیه‌ی
+  آن را رد یا اصلاح کردیم که در بخش ۹ به آن اشاره شده است.
+</p>
+
+<!-- ═══════════════════ ۸ ═══════════════════ -->
+<h1>۸. نمونه کد تولیدشده با کمک هوش مصنوعی</h1>
+
+<h2>نمونه‌ی فاز اول — منطق پخش تصادفی (شافل)</h2>
+<p>
+  این تابع در استور پخش‌کننده است. نکته‌ی ظریفش این است که آهنگ در حال پخش باید سرِ
+  صف بماند و با خاموش شدن شافل، ترتیب اصلی دقیقاً برگردد؛ برای همین دو صف جداگانه
+  نگه داشته می‌شود.
+</p>
+<div class="snippet"><div class="file">frontend/src/lib/stores/player-store.ts</div>
+<pre>toggleShuffle: () =&gt; {
+  const { shuffle, queue, baseQueue, index } = get();
+  const playing = queue[index] ?? null;
+  if (!shuffle) {
+    // Turn on: keep current track first, shuffle the rest.
+    const rest = shuffled(baseQueue.filter((id) =&gt; id !== playing));
+    set({ shuffle: true,
+          queue: playing ? [playing, ...rest] : shuffled(baseQueue),
+          index: 0 });
+  } else {
+    // Turn off: restore the canonical order around the current track.
+    set({ shuffle: false, queue: baseQueue,
+          index: playing ? Math.max(0, baseQueue.indexOf(playing)) : 0 });
+  }
+},</pre></div>
+
+<h2>نمونه‌ی فاز دوم — انقضای اشتراک</h2>
+<p>
+  این بخش پس از یک بازبینی اضافه شد: متوجه شدیم اشتراک منقضی‌شده همچنان امتیازات خود
+  را نگه می‌داشت. راه‌حل این بود که همه‌ی بررسی‌های دسترسی به‌جای فیلد ذخیره‌شده،
+  «سطح مؤثر» را بخوانند تا انقضا بدون نیاز به هیچ زمان‌بندی، بلافاصله اعمال شود.
+</p>
+<div class="snippet"><div class="file">backend/accounts/models.py</div>
+<pre>@property
+def subscription_is_active(self) -&gt; bool:
+    """A paid plan is only in force until its renewal date passes."""
+    if self.subscription_tier == SubscriptionTier.BASIC:
+        return True
+    return (self.subscription_renews_at is not None
+            and self.subscription_renews_at &gt; timezone.now())
+
+@property
+def current_tier(self) -&gt; str:
+    """A lapsed paid plan falls back to basic."""
+    return (self.subscription_tier if self.subscription_is_active
+            else SubscriptionTier.BASIC)</pre></div>
+
+<h2>نمونه‌ی دوزبانه‌سازی — ترجمه با جای‌گذاری مقدار</h2>
+<p>
+  متن‌های برنامه به فارسی نوشته شده‌اند و خود همان متن فارسی «کلید» ترجمه است؛ اگر
+  ترجمه‌ای نبود، متن فارسی نمایش داده می‌شود نه یک کلید خام. نکته‌ی مهم، حفظ
+  جای‌گذارها است تا جمله‌هایی که ترتیب کلماتشان بین دو زبان فرق دارد درست بمانند.
+</p>
+<div class="snippet"><div class="file">frontend/src/lib/i18n/index.ts</div>
+<pre>/**
+ * Translate a Persian source string, falling back to it when untranslated.
+ *
+ * `translate("{n} ⁧آهنگ⁩", "en", { n: 5 })` → `"5 tracks"`
+ */
+export function translate(text: string, language: Language, vars?: Vars): string {
+  return interpolate(language === "fa" ? text : EN[text] ?? text, vars);
+}</pre></div>
+
+<!-- ═══════════════════ ۹ ═══════════════════ -->
+<h1>۹. نقاط قوت و ضعف هوش مصنوعی</h1>
+
+<h2>در توسعه‌ی فرانت‌اند</h2>
+<table>
+  <tr><th style="width:12%">&nbsp;</th><th>مشاهده‌ی ما</th></tr>
+  <tr><td class="strong-tag">قوت</td><td>ساخت سریع کامپوننت‌های تکراری (کارت، جدول، فرم) و رعایت یکدست الگوهای موجود؛ کمک خوب در نوشتن استایل و چیدمان RTL</td></tr>
+  <tr><td class="strong-tag">قوت</td><td>تبدیل توضیح صورت پروژه به یک UI اولیه‌ی قابل کار در زمان کوتاه</td></tr>
+  <tr><td class="weak-tag">ضعف</td><td>گاهی از APIهای قدیمی نسخه‌های پیشین Next.js و کتابخانه‌ها استفاده می‌کرد و باید با مستندات نسخه‌ی واقعی اصلاح می‌شد</td></tr>
+  <tr><td class="weak-tag">ضعف</td><td>در جزئیات ظریف تجربه‌ی کاربری (مثل رفتار دکمه‌ی «قبلی» یا حفظ ترتیب پس از شافل) پیشنهاد اولیه‌اش ساده‌انگارانه بود و خودمان اصلاحش کردیم</td></tr>
+  <tr><td class="weak-tag">ضعف</td><td>مدیریت خطا را با <code>⁦catch⁩</code> خالی می‌نوشت. نتیجه این بود که هر خطایی — حتی خاموش بودن بک‌اند — به کاربر «این ایمیل قبلاً ثبت شده» نشان می‌داد و مدتی فکر می‌کردیم ثبت‌نام خراب است، در حالی‌که API سالم بود</td></tr>
+</table>
+
+<h2>در توسعه‌ی بک‌اند</h2>
+<table>
+  <tr><th style="width:12%">&nbsp;</th><th>مشاهده‌ی ما</th></tr>
+  <tr><td class="strong-tag">قوت</td><td>بسیار خوب در کدهای قالبی DRF — serializer، ViewSet، کلاس‌های دسترسی — و در نوشتن تست برای حالت‌های مرزی</td></tr>
+  <tr><td class="strong-tag">قوت</td><td>کمک مؤثر در بهینه‌سازی کوئری‌ها و جلوگیری از مشکل N+1</td></tr>
+  <tr><td class="weak-tag">ضعف</td><td>تمایل به تولید تست‌های یکپارچگی به‌جای تست واحد؛ ابتدا تقریباً همه‌ی تست‌ها از لایه‌ی HTTP رد می‌شدند و بعداً تست‌های واحد را اضافه کردیم</td></tr>
+  <tr><td class="weak-tag">ضعف</td><td>الزامات ضمنی صورت پروژه را از قلم می‌انداخت؛ انقضای اشتراک و فرمول واقعی پاداش تنها پس از بازبینی دستیِ خودمان با متن پروژه پیدا و اضافه شدند</td></tr>
+  <tr><td class="weak-tag">ضعف</td><td>سرویس‌ورکر PWA که تولید کرده بود «هر پاسخ موفق» را کش می‌کرد؛ یعنی پاسخ <code>⁦/api/auth/me/⁩</code> شامل نام و ایمیل کاربر روی دستگاه باقی می‌ماند و پس از خروج از حساب هم قابل خواندن بود. این را خودمان در تست PWA پیدا کردیم و کش را به «فقط منابع هم‌ریشه» محدود کردیم</td></tr>
+</table>
+
+<div class="note">
+  <p>
+    <strong>جمع‌بندی:</strong> هوش مصنوعی در «چگونه نوشتن» بسیار کمک کرد، ولی «چه
+    چیزی باید نوشته شود» همچنان نیازمند خواندن دقیق صورت پروژه و قضاوت خودمان بود.
+    الگوی مشترک هر سه ضعف جدی‌ای که پیدا کردیم یکی بود: کد در حالت خوش‌بینانه درست
+    کار می‌کرد و در حالت خطا یا مرزی اشتباه رفتار می‌کرد — و این‌ها فقط با تست کردن
+    دستیِ خودِ محصول پیدا شدند، نه با خواندن کد.
+  </p>
+</div>
+
+<!-- ═══════════════════ ۱۰ ═══════════════════ -->
+<h1>۱۰. وضعیت پیاده‌سازی</h1>
+<p>برای شفافیت، وضعیت موارد خواسته‌شده را این‌جا می‌آوریم:</p>
+<table>
+  <tr>
+    <th style="width:38%">مورد</th>
+    <th style="width:16%">وضعیت</th>
+    <th>توضیح</th>
+  </tr>
+  <tr><td>مدل‌ها، REST، اندپوینت‌های CRUD</td><td class="ok">انجام شد</td><td>۱۸ مسیر</td></tr>
+  <tr><td>ارسال و دریافت فایل</td><td class="ok">انجام شد</td><td>آهنگ، کاور، آواتار</td></tr>
+  <tr><td>ادغام با فرانت‌اند</td><td class="ok">انجام شد</td><td>هر چهار نقش</td></tr>
+  <tr><td>سطوح دسترسی (نقش و اشتراک)</td><td class="ok">انجام شد</td><td>سمت سرور</td></tr>
+  <tr><td>گزارش‌گیری سمت سرور</td><td class="ok">انجام شد</td><td>بدون محاسبه در فرانت</td></tr>
+  <tr><td>اشتراک و انقضا و تمدید</td><td class="ok">انجام شد</td><td>سطح مؤثر، بدون زمان‌بندی</td></tr>
+  <tr><td>درگاه پرداخت</td><td class="ok">انجام شد</td><td>سندباکس زرین‌پال + درگاه آزمایشی</td></tr>
+  <tr><td>تست بک‌اند (حداقل ۱۵)</td><td class="ok">۱۸۸ تست</td><td>واحد + یکپارچگی</td></tr>
+  <tr><td>تغییر زبان رابط کاربری</td><td class="ok">انجام شد</td><td>فارسی/انگلیسی با چیدمان RTL/LTR</td></tr>
+  <tr><td>داکرایز کردن (امتیازی)</td><td class="ok">انجام شد</td><td><code>⁦docker compose up⁩</code></td></tr>
+  <tr><td>پیشنهاددهنده آهنگ (امتیازی)</td><td class="ok">انجام شد</td><td>مبتنی بر تاریخچه‌ی پخش</td></tr>
+  <tr><td>PWA (امتیازی)</td><td class="ok">انجام شد</td><td>نصب‌شدنی و کارکرد آفلاین</td></tr>
+</table>
+
+<h2>دوزبانه‌سازی — آنچه در بازبینی نهایی تکمیل شد</h2>
+<p>
+  در نسخه‌ی پیشین این گزارش، تغییر زبان «ناقص» علامت خورده بود: گزینه‌اش وجود داشت
+  ولی متن‌ها ترجمه نشده بودند. این بخش اکنون کامل شده است:
+</p>
+<ul>
+  <li>واژه‌نامه‌ای با <strong>۴۳۶ عبارت</strong> که کل رابط کاربری را پوشش می‌دهد.</li>
+  <li>چیدمان با تغییر زبان از راست‌به‌چپ به چپ‌به‌راست برمی‌گردد؛ منوها هم از سمت درست باز می‌شوند.</li>
+  <li>اعداد، تاریخ و واحد پول تابع زبان‌اند: ارقام فارسی و تقویم جلالی در فارسی، ارقام لاتین و تقویم میلادی در انگلیسی.</li>
+  <li>قلم هم عوض می‌شود: استعداد برای فارسی و یک قلم لاتین برای انگلیسی.</li>
+</ul>
+
+<div class="note">
+  <span class="label">یک تصمیم آگاهانه</span>
+  <p>
+    نام آهنگ‌ها، آلبوم‌ها و هنرمندان <strong>ترجمه نمی‌شوند</strong>. این‌ها داده‌ی
+    کاتالوگ‌اند نه متن رابط کاربری — همان‌طور که اسپاتیفای هم نام آهنگ‌ها را ترجمه
+    نمی‌کند. بنابراین در حالت انگلیسی، رابط کاربری کاملاً انگلیسی است ولی نام آثار
+    فارسی می‌ماند؛ این نقص نیست، رفتار درست است.
+  </p>
+</div>
+
+<h2>درگاه پرداخت</h2>
+<p>
+  پیاده‌سازی روی <strong>سندباکس زرین‌پال</strong> است که به حساب پذیرنده نیاز ندارد.
+  مسیر کامل است: دریافت <code>⁦authority⁩</code>، هدایت کاربر به صفحه‌ی پرداخت، و
+  سپس <em>تأیید سمت سرور</em>. هیچ اشتراکی تا وقتی تأیید موفق نشود فعال نمی‌شود —
+  بازگشت مرورگر به آدرس callback به‌تنهایی هیچ چیز را اثبات نمی‌کند و
+  <code>⁦authority⁩</code> جعلی رد می‌شود. اگر سندباکس در دسترس نبود، با یک تنظیم
+  (<code>⁦PAYMENT_GATEWAY=fake⁩</code>) همان مسیر به‌صورت آفلاین اجرا می‌شود.
+</p>
+
+<!-- ═══════════════════ ۱۱ ═══════════════════ -->
+<h1>۱۱. اجرای پروژه</h1>
+<p>راهنمای کامل در <code>⁦README.md⁩</code> ریشه‌ی مخزن است. خلاصه‌اش:</p>
+<pre>docker compose up --build
+# frontend    → http://localhost:3000
+# backend API → http://localhost:8000/api
+# پنل مدیریت  → http://localhost:8000/admin</pre>
+<p>
+  داده‌های نمایشی خودکار ساخته می‌شوند. رمز عبور همه‌ی حساب‌ها: <code>⁦nava1234⁩</code>
+</p>
+<table>
+  <tr><th style="width:32%">ایمیل</th><th style="width:24%">نقش</th><th>چه چیزی را نشان می‌دهد</th></tr>
+  <tr><td class="tight"><code>⁦gold@nava.app⁩</code></td><td>شنونده‌ی طلایی</td><td>دسترسی زودهنگام، آمار، پلی‌لیست نامحدود</td></tr>
+  <tr><td class="tight"><code>⁦silver@nava.app⁩</code></td><td>شنونده‌ی نقره‌ای</td><td>اشتراک منقضی‌شده و نیاز به تمدید</td></tr>
+  <tr><td class="tight"><code>⁦basic@nava.app⁩</code></td><td>شنونده‌ی پایه</td><td>سقف ۶۰ استریم روزانه و ۶ پلی‌لیست</td></tr>
+  <tr><td class="tight"><code>⁦artist@nava.app⁩</code></td><td>هنرمند تاییدشده</td><td>استودیو، انتشار اثر، آمار و درآمد</td></tr>
+  <tr><td class="tight"><code>⁦pending@nava.app⁩</code></td><td>هنرمند در انتظار</td><td>حالت «در انتظار تایید» و مسدود بودن انتشار</td></tr>
+  <tr><td class="tight"><code>⁦support@nava.app⁩</code></td><td>پشتیبان</td><td>تیکت‌ها و احراز هویت هنرمندان</td></tr>
+  <tr><td class="tight"><code>⁦admin@nava.app⁩</code></td><td>مدیر سامانه</td><td>حسابرسی، کنترل قیمت‌ها و گزارش درآمد</td></tr>
+</table>
+<p class="lead">
+  همین فهرست پایین صفحه‌ی ورود هم هست و با یک کلیک وارد می‌شوید. سرویس‌ورکر PWA فقط
+  در بیلد تولیدی فعال است (<code>⁦npm run build &amp;&amp; npm start⁩</code>)، نه در حالت توسعه.
+</p>
+
+</body>
+</html>

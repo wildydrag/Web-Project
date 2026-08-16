@@ -1,4 +1,7 @@
+"use client";
+
 import { formatNumber, toFaDigits } from "@/lib/format";
+import { useT } from "@/lib/i18n";
 
 export interface DonutSlice {
   label: string;
@@ -20,6 +23,7 @@ export function DonutChart({
   size?: number;
   thickness?: number;
 }) {
+  const t = useT();
   const total = data.reduce((sum, d) => sum + d.value, 0) || 1;
   const radius = (size - thickness) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -33,7 +37,7 @@ export function DonutChart({
         viewBox={`0 0 ${size} ${size}`}
         className="shrink-0"
         role="img"
-        aria-label="توزیع کاربران بر اساس اشتراک"
+        aria-label={t("توزیع کاربران بر اساس اشتراک")}
       >
         <g transform={`rotate(-90 ${size / 2} ${size / 2})`}>
           {data.map((slice, i) => {
@@ -78,7 +82,10 @@ export function DonutChart({
               {slice.label}
             </span>
             <span className="tabular text-muted-foreground">
-              {formatNumber(slice.value)} ({toFaDigits(Math.round((slice.value / total) * 100))}٪)
+              {t("{value} ({percent}٪)", {
+                  value: formatNumber(slice.value),
+                  percent: toFaDigits(Math.round((slice.value / total) * 100)),
+                })}
             </span>
           </li>
         ))}
