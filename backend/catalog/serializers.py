@@ -211,6 +211,10 @@ class AlbumTrackSerializer(serializers.Serializer):
     title = serializers.CharField(max_length=200)
     duration_sec = serializers.IntegerField(min_value=1)
     lyrics = serializers.CharField(required=False, allow_blank=True, default="")
+    # Filled in from the `track_audio_<i>` / `track_cover_<i>` upload fields —
+    # see AlbumWriteSerializer.to_internal_value for why they arrive separately.
+    audio = serializers.FileField(required=False, allow_null=True)
+    cover = serializers.ImageField(required=False, allow_null=True)
 
 
 class AlbumWriteSerializer(_CreditMixin, serializers.Serializer):
@@ -240,6 +244,16 @@ class AlbumWriteSerializer(_CreditMixin, serializers.Serializer):
             flat = {key: data.get(key) for key in data}
             flat["tracks"] = underscoreize(parsed)
             flat["collaborator_ids"] = data.getlist("collaborator_ids") or []
+            # A file cannot live inside that JSON string, so each track's audio
+            # and cover are uploaded as their own fields and matched back up by
+            # position: track_audio_0 belongs to tracks[0], and so on.
+            for index, track in enumerate(flat["tracks"]):
+                if not isinstance(track, dict):
+                    continue
+                for field in ("audio", "cover"):
+                    upload = data.get(f"track_{field}_{index}")
+                    if upload is not None:
+                        track[field] = upload
             data = flat
         return super().to_internal_value(data)
 
@@ -263,6 +277,9 @@ class AlbumWriteSerializer(_CreditMixin, serializers.Serializer):
                 album=album, title=track["title"], genre=validated_data["genre"],
                 duration_sec=track["duration_sec"], release_date=validated_data["release_date"],
                 lyrics=track.get("lyrics", ""), track_number=track_number,
+                audio=track.get("audio"),
+                # A track without its own artwork shows the album's.
+                cover=track.get("cover") or validated_data.get("cover"),
                 cover_seed=album.id, early_access=False,
             )
             self._write_credits(SongArtist, "song", song, primary, collaborator_ids)

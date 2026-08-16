@@ -28,18 +28,29 @@ import { useDb } from "@/lib/stores/db-store";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
 import { toFaDigits } from "@/lib/format";
+import { readAudioDuration } from "@/lib/audio-duration";
 
 type ReleaseKind = "single" | "album";
 interface TrackDraft {
   title: string;
   durationSec: number;
+  /** Without this the track publishes fine but plays nothing. */
+  audio?: File;
+  /** Optional; a track with no artwork of its own shows the album's. */
+  cover?: File;
 }
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
+/** What the brief asks for: MP3, WAV, FLAC. */
+const AUDIO_ACCEPT = "audio/*,.mp3,.wav,.flac";
+
 /**
- * Publish a new single or album. Audio/cover file pickers are shown to match the
- * brief (MP3/WAV/FLAC), but in the Phase 1 mock only the metadata is persisted.
+ * Publish a new single or album.
+ *
+ * Every track — the single, or each track of an album — can carry its own audio
+ * file and artwork, and both are uploaded for real. Choosing a file fills in the
+ * duration from the file itself, so the artist does not have to count seconds.
  */
 export function PublishWorkDialog({ artistId }: { artistId: string }) {
   const t = useT();
@@ -73,6 +84,11 @@ export function PublishWorkDialog({ artistId }: { artistId: string }) {
     setCollaborators([]);
     setAudioFile(null);
     setCoverFile(null);
+  }
+
+  /** Update one field of one track, leaving the rest of the list alone. */
+  function patchTrack(index: number, patch: Partial<TrackDraft>) {
+    setTracks((prev) => prev.map((t, j) => (j === index ? { ...t, ...patch } : t)));
   }
 
   function toggleCollaborator(id: string) {
@@ -113,7 +129,12 @@ export function PublishWorkDialog({ artistId }: { artistId: string }) {
           genre,
           releaseDate: releaseDate,
           collaboratorIds: collaborators,
-          tracks: validTracks.map((t) => ({ title: t.title.trim(), durationSec: t.durationSec })),
+          tracks: validTracks.map((t) => ({
+            title: t.title.trim(),
+            durationSec: t.durationSec,
+            audio: t.audio,
+            cover: t.cover,
+          })),
           cover: coverFile ?? undefined,
         });
       }
@@ -199,9 +220,14 @@ export function PublishWorkDialog({ artistId }: { artistId: string }) {
                 <FilePicker
                   icon={FileAudio}
                   label={t("فایل صوتی")}
-                  accept="audio/*,.mp3,.wav,.flac"
+                  accept={AUDIO_ACCEPT}
                   file={audioFile}
-                  onPick={setAudioFile}
+                  onPick={async (file) => {
+                    setAudioFile(file);
+                    if (!file) return;
+                    const seconds = await readAudioDuration(file);
+                    if (seconds) setDurationSec(seconds);
+                  }}
                 />
                 <FilePicker
                   icon={ImageIcon}
@@ -239,46 +265,59 @@ export function PublishWorkDialog({ artistId }: { artistId: string }) {
               <TabsContent value="album" className="space-y-3">
                 <Label>{t("ترک‌ها")}</Label>
                 {tracks.map((track, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <Input
-                      value={track.title}
-                      onChange={(event) =>
-                        setTracks((prev) =>
-                          prev.map((t, j) =>
-                            j === i ? { ...t, title: event.target.value } : t,
-                          ),
-                        )
-                      }
-                      placeholder={t("عنوان ترک {n}", { n: toFaDigits(i + 1) })}
-                      className="h-10 flex-1"
-                    />
-                    <Input
-                      type="number"
-                      min={1}
-                      dir="ltr"
-                      value={track.durationSec}
-                      onChange={(event) =>
-                        setTracks((prev) =>
-                          prev.map((t, j) =>
-                            j === i
-                              ? { ...t, durationSec: Number(event.target.value) || 0 }
-                              : t,
-                          ),
-                        )
-                      }
-                      className="h-10 w-20"
-                      aria-label={t("مدت ترک (ثانیه)")}
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setTracks((prev) => prev.filter((_, j) => j !== i))}
-                      disabled={tracks.length <= 1}
-                      aria-label={t("حذف ترک")}
-                    >
-                      <X />
-                    </Button>
+                  <div key={i} className="space-y-2 rounded-lg border p-2">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={track.title}
+                        onChange={(event) => patchTrack(i, { title: event.target.value })}
+                        placeholder={t("عنوان ترک {n}", { n: toFaDigits(i + 1) })}
+                        className="h-10 flex-1"
+                      />
+                      <Input
+                        type="number"
+                        min={1}
+                        dir="ltr"
+                        value={track.durationSec}
+                        onChange={(event) =>
+                          patchTrack(i, { durationSec: Number(event.target.value) || 0 })
+                        }
+                        className="h-10 w-20"
+                        aria-label={t("مدت ترک (ثانیه)")}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setTracks((prev) => prev.filter((_, j) => j !== i))}
+                        disabled={tracks.length <= 1}
+                        aria-label={t("حذف ترک")}
+                      >
+                        <X />
+                      </Button>
+                    </div>
+                    {/* Each track carries its own file — an album is not one
+                        recording, and without this the tracks never play. */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <FilePicker
+                        icon={FileAudio}
+                        label={t("فایل صوتی")}
+                        accept={AUDIO_ACCEPT}
+                        file={track.audio ?? null}
+                        onPick={async (file) => {
+                          patchTrack(i, { audio: file ?? undefined });
+                          if (!file) return;
+                          const seconds = await readAudioDuration(file);
+                          if (seconds) patchTrack(i, { durationSec: seconds });
+                        }}
+                      />
+                      <FilePicker
+                        icon={ImageIcon}
+                        label={t("کاور")}
+                        accept="image/*"
+                        file={track.cover ?? null}
+                        onPick={(file) => patchTrack(i, { cover: file ?? undefined })}
+                      />
+                    </div>
                   </div>
                 ))}
                 <Button

@@ -46,7 +46,15 @@ export interface PublishAlbumInput {
   genre: string;
   releaseDate: string;
   collaboratorIds?: string[];
-  tracks: { title: string; durationSec: number; lyrics?: string }[];
+  tracks: {
+    title: string;
+    durationSec: number;
+    lyrics?: string;
+    /** The track's own audio file; without one the track cannot be played. */
+    audio?: File;
+    /** Optional per-track artwork; falls back to the album cover. */
+    cover?: File;
+  }[];
   cover?: File;
 }
 
@@ -307,28 +315,37 @@ export const useDb = create<DbState>()((set, get) => ({
   },
 
   publishAlbum: async (_artistId, input) => {
+    // The JSON `tracks` field carries metadata only — a file cannot be nested
+    // inside it, so each track's audio and artwork go up as their own
+    // `track_audio_<i>` / `track_cover_<i>` fields and the server pairs them
+    // back by position.
     const tracks = input.tracks.map((t) => ({
       title: t.title,
       durationSec: t.durationSec,
       lyrics: t.lyrics ?? "",
     }));
+    const trackFiles: Record<string, File> = {};
+    input.tracks.forEach((track, i) => {
+      if (track.audio) trackFiles[`track_audio_${i}`] = track.audio;
+      if (track.cover) trackFiles[`track_cover_${i}`] = track.cover;
+    });
+
+    const payload = {
+      title: input.title,
+      genre: input.genre,
+      releaseDate: input.releaseDate,
+      collaboratorIds: input.collaboratorIds ?? [],
+      tracks,
+    };
+    const hasFiles = Boolean(input.cover) || Object.keys(trackFiles).length > 0;
+
     try {
-      const album = input.cover
-        ? await api.postForm<Album>("/albums/", toFormData({
-            title: input.title,
-            genre: input.genre,
-            releaseDate: input.releaseDate,
-            collaboratorIds: input.collaboratorIds ?? [],
-            tracks,
-            cover: input.cover,
-          }))
-        : await api.post<Album>("/albums/", {
-            title: input.title,
-            genre: input.genre,
-            releaseDate: input.releaseDate,
-            collaboratorIds: input.collaboratorIds ?? [],
-            tracks,
-          });
+      const album = hasFiles
+        ? await api.postForm<Album>(
+            "/albums/",
+            toFormData({ ...payload, cover: input.cover, ...trackFiles }),
+          )
+        : await api.post<Album>("/albums/", payload);
       set((s) => ({ albums: [album, ...s.albums] }));
       bg(get().hydrate(get().users.find(Boolean)!)); // refresh songs list
       return album;

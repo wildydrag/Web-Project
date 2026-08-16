@@ -11,12 +11,15 @@ password ``nava1234`` (documented in the README).
 
 from datetime import datetime
 
+from django.core.files.base import ContentFile
+
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 
 from accounts.models import Artist, Follow, User, UserPreferences
+from common.demo_audio import DURATION_SEC as DEMO_AUDIO_SEC, build_demo_wav
 from catalog.models import Album, AlbumArtist, Song, SongArtist
 from common.constants import (
     ArtistStatus,
@@ -267,8 +270,12 @@ class Command(BaseCommand):
         songs = {}
         counter = 1
 
-        def make_song(title, duration, artist_ids, genre_label, release, album, early,
-                      cover_seed, track_number=None):
+        # `fixture_duration` is the length the Phase 1 mock invented for each
+        # track. It is kept in the fixtures for reference but deliberately not
+        # used: the real length of the generated audio is what gets stored, so
+        # the catalog never claims a duration the file does not have.
+        def make_song(title, fixture_duration, artist_ids, genre_label, release, album,
+                      early, cover_seed, track_number=None):
             nonlocal counter
             i = counter
             counter += 1
@@ -276,10 +283,14 @@ class Command(BaseCommand):
             streams = 28000 + i * 5417
             song = Song.objects.create(
                 id=sid, title=title, album=album, track_number=track_number,
-                cover_seed=cover_seed, duration_sec=duration, genre=GENRE[genre_label],
+                cover_seed=cover_seed, duration_sec=DEMO_AUDIO_SEC, genre=GENRE[genre_label],
                 release_date=parse_date(release), lyrics=SAMPLE_LYRICS if album else "",
                 early_access=early, stream_count=streams, listener_count=round(streams * 0.34),
             )
+            # Give every seeded track real, playable audio. `duration_sec` above
+            # is the generated clip's length rather than the fixture's invented
+            # one, so the progress bar and the sound agree.
+            song.audio.save(f"{sid}.wav", ContentFile(build_demo_wav(i)), save=True)
             for pos, aid in enumerate(artist_ids):
                 SongArtist.objects.create(song=song, artist=artists[aid], position=pos)
             songs[sid] = song

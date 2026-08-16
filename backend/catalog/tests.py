@@ -5,7 +5,9 @@ from io import BytesIO
 import pytest
 from PIL import Image
 
-from catalog.models import Song
+from django.core.files.uploadedfile import SimpleUploadedFile
+
+from catalog.models import Album, Song
 from engagement.models import Notification
 
 pytestmark = pytest.mark.django_db
@@ -156,3 +158,73 @@ def test_publish_single_with_audio_upload(api, auth, approved_artist):
     assert body["audioUrl"] and body["coverUrl"]
     song = Song.objects.get(id=body["id"])
     assert song.audio.name and song.cover.name
+
+
+class TestAlbumTrackUploads:
+    """Per-track audio and artwork when publishing an album.
+
+    A multipart body cannot nest a file inside the JSON `tracks` string, so each
+    track's files travel as their own `track_audio_<i>` / `track_cover_<i>`
+    fields and are matched back to the track by position. Getting that pairing
+    wrong is the kind of bug that silently attaches the wrong file, so these
+    tests check the association, not merely that something was saved.
+    """
+
+    def _publish(self, client, extra):
+        import json
+        body = {
+            "title": "آلبوم صوتی", "genre": "پاپ", "releaseDate": "2026-07-01",
+            "tracks": json.dumps([
+                {"title": "ترک یک", "durationSec": 200},
+                {"title": "ترک دو", "durationSec": 180},
+            ]),
+        }
+        body.update(extra)
+        return client.post("/api/albums/", body, format="multipart")
+
+    def test_each_track_keeps_its_own_audio(self, auth, approved_artist):
+        user, _artist = approved_artist
+        resp = self._publish(auth(user), {
+            "track_audio_0": SimpleUploadedFile("one.mp3", b"ID3-one", content_type="audio/mpeg"),
+            "track_audio_1": SimpleUploadedFile("two.mp3", b"ID3-two", content_type="audio/mpeg"),
+        })
+        assert resp.status_code == 201
+        songs = Song.objects.filter(album_id=resp.json()["id"]).order_by("track_number")
+        assert [s.audio.read() for s in songs] == [b"ID3-one", b"ID3-two"]
+
+    def test_the_api_returns_a_playable_url_per_track(self, auth, approved_artist):
+        user, _artist = approved_artist
+        resp = self._publish(auth(user), {
+            "track_audio_0": _audio(), "track_audio_1": _audio(),
+        })
+        album_id = resp.json()["id"]
+        for song_id in resp.json()["songIds"]:
+            body = auth(user).get(f"/api/songs/{song_id}/").json()
+            assert body["audioUrl"], f"{song_id} has no audioUrl"
+        assert Album.objects.get(id=album_id).songs.count() == 2
+
+    def test_a_track_may_carry_its_own_cover(self, auth, approved_artist):
+        user, _artist = approved_artist
+        resp = self._publish(auth(user), {"track_cover_1": _png()})
+        songs = Song.objects.filter(album_id=resp.json()["id"]).order_by("track_number")
+        assert not songs[0].cover.name          # no per-track cover given
+        assert songs[1].cover.name              # this one had its own
+
+    def test_tracks_fall_back_to_the_album_cover(self, auth, approved_artist):
+        user, _artist = approved_artist
+        resp = self._publish(auth(user), {"cover": _png()})
+        songs = Song.objects.filter(album_id=resp.json()["id"])
+        assert all(s.cover.name for s in songs), "tracks should inherit the album artwork"
+
+    def test_publishing_without_any_audio_still_works(self, auth, approved_artist):
+        # Metadata-only albums stay valid; audio is optional.
+        user, _artist = approved_artist
+        resp = self._publish(auth(user), {})
+        assert resp.status_code == 201
+        assert all(not s.audio.name for s in Song.objects.filter(album_id=resp.json()["id"]))
+
+    def test_a_file_for_a_track_that_does_not_exist_is_ignored(self, auth, approved_artist):
+        user, _artist = approved_artist
+        resp = self._publish(auth(user), {"track_audio_7": _audio()})
+        assert resp.status_code == 201
+        assert Song.objects.filter(album_id=resp.json()["id"]).count() == 2
